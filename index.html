@@ -546,35 +546,13 @@
         <div class="card-head">
           <span class="dot"></span>
           <span class="card-title">Calls</span>
-          <span class="card-tag">fresh dials</span>
+          <span class="card-tag">daily activity</span>
         </div>
 
-        <div class="row">
-          <span class="row-label">Calls</span>
-          <span class="step-group">
-            <button class="step" type="button" data-target="calls" data-delta="-1">−</button>
-            <input class="num" id="calls" type="number" min="0" max="9999" step="1" value="0">
-            <button class="step" type="button" data-target="calls" data-delta="1">+</button>
-          </span>
-        </div>
-
-        <div class="row">
-          <span class="row-label">Spoke To</span>
-          <span class="step-group">
-            <button class="step" type="button" data-target="callsSpoke" data-delta="-1">−</button>
-            <input class="num" id="callsSpoke" type="number" min="0" max="9999" step="1" value="0">
-            <button class="step" type="button" data-target="callsSpoke" data-delta="1">+</button>
-          </span>
-        </div>
-
-        <div class="row">
-          <span class="row-label">Booked</span>
-          <span class="step-group">
-            <button class="step" type="button" data-target="callsBooked" data-delta="-1">−</button>
-            <input class="num" id="callsBooked" type="number" min="0" max="9999" step="1" value="0">
-            <button class="step" type="button" data-target="callsBooked" data-delta="1">+</button>
-          </span>
-        </div>
+        <div class="row"><span class="row-label">Lead Calls</span><span class="step-group"><button class="step" type="button" data-target="leadCalls" data-delta="-1">−</button><input class="num" id="leadCalls" type="number" min="0" max="9999" step="1" value="0"><button class="step" type="button" data-target="leadCalls" data-delta="1">+</button></span></div>
+        <div class="row"><span class="row-label">First Consult Calls</span><span class="step-group"><button class="step" type="button" data-target="firstConsultCalls" data-delta="-1">−</button><input class="num" id="firstConsultCalls" type="number" min="0" max="9999" step="1" value="0"><button class="step" type="button" data-target="firstConsultCalls" data-delta="1">+</button></span></div>
+        <div class="row"><span class="row-label">Finance Run Calls</span><span class="step-group"><button class="step" type="button" data-target="financeRunCalls" data-delta="-1">−</button><input class="num" id="financeRunCalls" type="number" min="0" max="9999" step="1" value="0"><button class="step" type="button" data-target="financeRunCalls" data-delta="1">+</button></span></div>
+        <div class="row"><span class="row-label">Coffee Run Calls</span><span class="step-group"><button class="step" type="button" data-target="coffeeRunCalls" data-delta="-1">−</button><input class="num" id="coffeeRunCalls" type="number" min="0" max="9999" step="1" value="0"><button class="step" type="button" data-target="coffeeRunCalls" data-delta="1">+</button></span></div>
       </section>
 
       <section class="card fc" style="--d:.15s">
@@ -666,7 +644,7 @@
       </section>
 
       <div class="stats">
-        <div class="stat"><div class="v" id="totalDials">0</div><div class="l">Total Dials</div></div>
+        <div class="stat"><div class="v" id="totalDials">0</div><div class="l">Total Calls</div></div>
         <div class="stat"><div class="v" id="totalSpoke">0</div><div class="l">Spoke To</div></div>
         <div class="stat"><div class="v" id="totalBooked">0</div><div class="l">Booked</div></div>
         <div class="stat"><div class="v" id="bookRate">–</div><div class="l">Book Rate</div></div>
@@ -688,14 +666,14 @@
     'labelA','valueA',
     'labelP','valueP',
     'labelS','valueS',
-    'calls','callsSpoke','callsBooked',
+    'leadCalls','firstConsultCalls','financeRunCalls','coffeeRunCalls',
     'fcCalls','fcSpoke','fcBooked','fcNote',
     'recCalls','recSpoke','recBooked'
   ];
 
   const numberIds = [
     'valueD','valueR','valueA','valueP','valueS',
-    'calls','callsSpoke','callsBooked',
+    'leadCalls','firstConsultCalls','financeRunCalls','coffeeRunCalls',
     'fcCalls','fcSpoke','fcBooked',
     'recCalls','recSpoke','recBooked'
   ];
@@ -755,9 +733,11 @@
 
     return heading +
       `${labels}\n\n` +
-      `Calls - ${numberValue('calls')}\n` +
-      `Spoke To - ${numberValue('callsSpoke')}\n` +
-      `Booked - ${numberValue('callsBooked')}\n\n` +
+      `Calls\n` +
+      `Lead Calls - ${numberValue('leadCalls')}\n` +
+      `First Consult Calls - ${numberValue('firstConsultCalls')}\n` +
+      `Finance Run Calls - ${numberValue('financeRunCalls')}\n` +
+      `Coffee Run Calls - ${numberValue('coffeeRunCalls')}\n\n` +
       `Follow Up FC's - ${numberValue('fcCalls')}\n` +
       `Spoke To - ${numberValue('fcSpoke')}${note}\n` +
       `Booked - ${numberValue('fcBooked')}\n\n` +
@@ -770,17 +750,16 @@
     byId('report').textContent = buildReport();
 
     const dials =
-      numberValue('calls') +
-      numberValue('fcCalls') +
-      numberValue('recCalls');
+      numberValue('leadCalls') +
+      numberValue('firstConsultCalls') +
+      numberValue('financeRunCalls') +
+      numberValue('coffeeRunCalls');
 
     const spoke =
-      numberValue('callsSpoke') +
       numberValue('fcSpoke') +
       numberValue('recSpoke');
 
     const booked =
-      numberValue('callsBooked') +
       numberValue('fcBooked') +
       numberValue('recBooked');
 
