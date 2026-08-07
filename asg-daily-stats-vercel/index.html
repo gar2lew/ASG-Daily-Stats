@@ -1,0 +1,889 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Daily Stats - ASG</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --navy:#0e1a2f; --navy2:#16263e;
+    --cream:#efe9df; --card:#faf7f1; --inset:#f6efe6;
+    --line:#e3dbcc; --line2:#d6ccb8;
+    --ink:#16263e; --muted:#5f6a7a;
+    --gold:#b3913f; --gold2:#c2a355; --gold-deep:#9a7c33;
+    --green:#2f8f68;
+  }
+
+  *{box-sizing:border-box;margin:0;padding:0}
+
+  body{
+    min-height:100vh;
+    font-family:'IBM Plex Sans',sans-serif;
+    background:
+      radial-gradient(900px 320px at 50% -80px,rgba(194,163,85,.14),transparent 70%),
+      var(--cream);
+    color:var(--ink);
+  }
+
+  button,input{font:inherit}
+
+  .topbar{
+    position:sticky;
+    top:0;
+    z-index:50;
+    background:var(--navy);
+    box-shadow:0 6px 24px -12px rgba(14,26,47,.55);
+    animation:drop .5s ease both;
+  }
+
+  @keyframes drop{
+    from{transform:translateY(-100%)}
+    to{transform:translateY(0)}
+  }
+
+  .topbar-inner{
+    max-width:1180px;
+    margin:0 auto;
+    padding:16px 22px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:16px;
+    flex-wrap:wrap;
+  }
+
+  h1{
+    font-family:'Archivo',sans-serif;
+    font-weight:800;
+    font-size:clamp(19px,3vw,26px);
+    color:#f5f1e8;
+    letter-spacing:.01em;
+  }
+
+  h1 .asg{color:var(--gold2)}
+
+  .head-right{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    flex-wrap:wrap;
+  }
+
+  .date-chip{
+    padding:7px 13px;
+    border:1px solid #2a3b57;
+    border-radius:99px;
+    background:rgba(255,255,255,.04);
+    color:#c8cfdb;
+    font:400 12px 'IBM Plex Mono',monospace;
+  }
+
+  .btn{
+    padding:11px 20px;
+    border:1px solid transparent;
+    border-radius:99px;
+    cursor:pointer;
+    font-family:'IBM Plex Sans',sans-serif;
+    font-weight:700;
+    font-size:13.5px;
+    transition:transform .15s ease,box-shadow .2s ease,background .2s,color .2s,border-color .2s;
+  }
+
+  .btn:active{transform:scale(.96)}
+
+  .btn.gold{
+    background:var(--gold2);
+    color:var(--navy);
+    box-shadow:0 6px 18px -8px rgba(179,145,63,.7);
+  }
+
+  .btn.gold:hover{
+    background:#cfae5e;
+    transform:translateY(-2px);
+  }
+
+  .btn.gold.done{
+    background:var(--green);
+    color:#fff;
+    box-shadow:0 6px 18px -8px rgba(47,143,104,.7);
+  }
+
+  .btn.ghost{
+    background:transparent;
+    color:#c8cfdb;
+    border-color:#2a3b57;
+  }
+
+  .btn.ghost:hover{
+    color:#fff;
+    border-color:#41577c;
+    transform:translateY(-2px);
+  }
+
+  .app{
+    max-width:1180px;
+    margin:0 auto;
+    padding:26px 22px 70px;
+  }
+
+  .rep-card{
+    display:flex;
+    align-items:center;
+    gap:14px;
+    margin-bottom:16px;
+    border-left:5px solid var(--green);
+  }
+
+  .rep-icon{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    width:46px;
+    height:46px;
+    flex:none;
+    border-radius:50%;
+    background:var(--navy);
+  }
+
+  .rep-field{flex:1}
+
+  .rep-field label{
+    display:block;
+    margin-bottom:5px;
+    color:var(--green);
+    font:600 10px 'IBM Plex Mono',monospace;
+    letter-spacing:.18em;
+    text-transform:uppercase;
+  }
+
+  .rep-field input{
+    width:100%;
+    padding:11px 14px;
+    border:1px solid var(--line);
+    border-radius:12px;
+    background:#fff;
+    color:var(--ink);
+    outline:none;
+    font:600 16px 'IBM Plex Sans',sans-serif;
+    transition:border-color .2s,box-shadow .2s;
+  }
+
+  .rep-field input:focus{
+    border-color:var(--gold2);
+    box-shadow:0 0 0 3px rgba(194,163,85,.22);
+  }
+
+  .grid{
+    display:grid;
+    grid-template-columns:1.12fr .88fr;
+    gap:20px;
+    align-items:start;
+  }
+
+  .col-left{
+    display:flex;
+    flex-direction:column;
+    gap:16px;
+  }
+
+  .col-right{
+    position:sticky;
+    top:86px;
+    display:flex;
+    flex-direction:column;
+    gap:16px;
+  }
+
+  .card{
+    padding:18px 20px;
+    border:1px solid var(--line);
+    border-radius:16px;
+    background:var(--card);
+    box-shadow:0 2px 10px -6px rgba(22,38,62,.18);
+    transition:transform .2s ease,box-shadow .25s ease,border-color .25s;
+    animation:rise .55s ease both;
+    animation-delay:var(--d,0s);
+  }
+
+  .card:hover{
+    transform:translateY(-2px);
+    border-color:var(--line2);
+    box-shadow:0 12px 30px -18px rgba(22,38,62,.35);
+  }
+
+  .card.tally,.card.fc{--acc:var(--gold)}
+  .card.calls,.card.rec{--acc:var(--green)}
+
+  .card-head{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    margin-bottom:12px;
+  }
+
+  .dot{
+    width:9px;
+    height:9px;
+    flex:none;
+    border-radius:2px;
+    background:var(--acc);
+  }
+
+  .card-title{
+    color:var(--navy2);
+    font-family:'Archivo',sans-serif;
+    font-weight:800;
+    font-size:16px;
+  }
+
+  .card-tag{
+    margin-left:auto;
+    color:var(--green);
+    font:600 10px 'IBM Plex Mono',monospace;
+    letter-spacing:.18em;
+    text-transform:uppercase;
+  }
+
+  .row{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+    padding:9px 8px;
+    border-radius:10px;
+    transition:background .2s;
+  }
+
+  .row:hover{background:#f2ecdf}
+  .row + .row{border-top:1px dashed var(--line)}
+
+  .row-label{
+    color:var(--muted);
+    font:600 12px 'IBM Plex Mono',monospace;
+    letter-spacing:.14em;
+    text-transform:uppercase;
+  }
+
+  .step-group{
+    display:flex;
+    align-items:center;
+    gap:8px;
+  }
+
+  .step{
+    width:38px;
+    height:38px;
+    border:1px solid var(--line);
+    border-radius:12px;
+    background:#fff;
+    color:var(--navy2);
+    cursor:pointer;
+    line-height:1;
+    font-weight:700;
+    font-size:17px;
+    box-shadow:0 2px 5px -2px rgba(22,38,62,.25);
+    transition:all .15s ease;
+  }
+
+  .step:hover{
+    transform:translateY(-1px);
+    border-color:var(--gold2);
+    box-shadow:0 5px 12px -4px rgba(179,145,63,.5);
+  }
+
+  .step:active{transform:scale(.9)}
+
+  .num{
+    width:82px;
+    min-height:42px;
+    padding:4px 6px;
+    border:1px solid transparent;
+    border-radius:9px;
+    background:transparent;
+    color:var(--acc);
+    text-align:center;
+    outline:none;
+    font:800 26px 'Archivo',sans-serif;
+    appearance:textfield;
+    -moz-appearance:textfield;
+  }
+
+  .num::-webkit-outer-spin-button,
+  .num::-webkit-inner-spin-button{
+    margin:0;
+    -webkit-appearance:none;
+  }
+
+  .num:focus{
+    border-color:var(--acc);
+    background:#fff;
+    box-shadow:0 0 0 3px color-mix(in srgb,var(--acc) 20%,transparent);
+  }
+
+  .letter-badge{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    width:48px;
+    height:37px;
+    border-radius:10px;
+    background:var(--gold2);
+    box-shadow:0 4px 12px -5px rgba(179,145,63,.8);
+  }
+
+  .letter-input{
+    width:3ch;
+    border:none;
+    background:transparent;
+    color:var(--navy);
+    text-align:center;
+    text-transform:uppercase;
+    outline:none;
+    font:800 17px 'Archivo',sans-serif;
+  }
+
+  .note-wrap{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    margin-top:12px;
+    padding:10px 14px;
+    border:1.5px dashed var(--line2);
+    border-radius:12px;
+    background:#fbf7ee;
+  }
+
+  .note-wrap:focus-within{border-color:var(--gold)}
+
+  .paren{
+    color:var(--gold);
+    font:600 15px 'IBM Plex Mono',monospace;
+  }
+
+  .note-input{
+    flex:1;
+    min-width:0;
+    border:none;
+    background:transparent;
+    color:var(--ink);
+    outline:none;
+    font:400 13px 'IBM Plex Mono',monospace;
+  }
+
+  .preview{border-left:5px solid var(--gold)}
+
+  .live-dot{
+    width:8px;
+    height:8px;
+    border-radius:50%;
+    background:var(--green);
+    box-shadow:0 0 8px rgba(47,143,104,.7);
+    animation:pulse 1.6s ease infinite;
+  }
+
+  @keyframes pulse{
+    0%,100%{opacity:1}
+    50%{opacity:.3}
+  }
+
+  .report{
+    min-height:365px;
+    padding:18px 20px;
+    border:1px solid #e6dcc6;
+    border-radius:12px;
+    background:var(--inset);
+    color:var(--navy2);
+    white-space:pre-wrap;
+    font:500 14.5px/1.75 'IBM Plex Mono',monospace;
+  }
+
+  .hint{
+    margin-top:10px;
+    color:#8d8471;
+    font:400 11px 'IBM Plex Mono',monospace;
+  }
+
+  .stats{
+    display:grid;
+    grid-template-columns:repeat(4,1fr);
+    gap:10px;
+  }
+
+  .stat{
+    padding:13px 8px;
+    border:1px solid var(--line);
+    border-radius:14px;
+    background:var(--card);
+    text-align:center;
+    box-shadow:0 2px 8px -5px rgba(22,38,62,.2);
+  }
+
+  .stat .v{
+    font:800 22px 'Archivo',sans-serif;
+  }
+
+  .stat .l{
+    margin-top:4px;
+    color:var(--muted);
+    font:400 9.5px 'IBM Plex Mono',monospace;
+    letter-spacing:.16em;
+    text-transform:uppercase;
+  }
+
+  .stat:nth-child(1) .v,.stat:nth-child(3) .v{color:var(--green)}
+  .stat:nth-child(2) .v,.stat:nth-child(4) .v{color:var(--gold-deep)}
+
+  @keyframes rise{
+    from{opacity:0;transform:translateY(16px)}
+    to{opacity:1;transform:translateY(0)}
+  }
+
+  @media(max-width:920px){
+    .grid{grid-template-columns:1fr}
+    .col-right{position:static}
+  }
+
+  @media(max-width:560px){
+    .topbar-inner,.app{padding-left:14px;padding-right:14px}
+    .head-right{width:100%}
+    .date-chip{margin-right:auto}
+    .rep-card{align-items:flex-start}
+    .card-tag{display:none}
+    .row{padding-left:2px;padding-right:2px}
+    .step{width:42px;height:42px}
+    .num{width:72px}
+    .stats{grid-template-columns:repeat(2,1fr)}
+  }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar-inner">
+    <h1>Daily Stats <span class="asg">- ASG</span></h1>
+    <div class="head-right">
+      <div class="date-chip" id="dateChip"></div>
+      <button class="btn gold" id="copyBtn" type="button">Copy Report</button>
+      <button class="btn ghost" id="resetBtn" type="button">New Day ⟲</button>
+    </div>
+  </div>
+</header>
+
+<main class="app">
+  <section class="card rep-card" style="--d:.02s">
+    <span class="rep-icon" aria-hidden="true">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#f5f1e8" stroke-width="2" stroke-linecap="round">
+        <circle cx="12" cy="8" r="4"></circle>
+        <path d="M4 20c0-4 4-6 8-6s8 2 8 6"></path>
+      </svg>
+    </span>
+    <div class="rep-field">
+      <label for="repName">Rep Name</label>
+      <input id="repName" type="text" placeholder="e.g. Josh" autocomplete="name">
+    </div>
+  </section>
+
+  <div class="grid">
+    <div class="col-left">
+
+      <section class="card tally" style="--d:.05s">
+        <div class="card-head">
+          <span class="dot"></span>
+          <span class="card-title">Tally</span>
+          <span class="card-tag">tap letters to rename</span>
+        </div>
+
+        <div class="row">
+          <span class="letter-badge"><input class="letter-input" id="labelD" maxlength="3" value="D" aria-label="First tally label"></span>
+          <span class="step-group">
+            <button class="step" type="button" data-target="valueD" data-delta="-1">−</button>
+            <input class="num" id="valueD" type="number" min="0" max="9999" step="1" value="0">
+            <button class="step" type="button" data-target="valueD" data-delta="1">+</button>
+          </span>
+        </div>
+
+        <div class="row">
+          <span class="letter-badge"><input class="letter-input" id="labelR" maxlength="3" value="R" aria-label="Second tally label"></span>
+          <span class="step-group">
+            <button class="step" type="button" data-target="valueR" data-delta="-1">−</button>
+            <input class="num" id="valueR" type="number" min="0" max="9999" step="1" value="0">
+            <button class="step" type="button" data-target="valueR" data-delta="1">+</button>
+          </span>
+        </div>
+
+        <div class="row">
+          <span class="letter-badge"><input class="letter-input" id="labelA" maxlength="3" value="A" aria-label="Third tally label"></span>
+          <span class="step-group">
+            <button class="step" type="button" data-target="valueA" data-delta="-1">−</button>
+            <input class="num" id="valueA" type="number" min="0" max="9999" step="1" value="0">
+            <button class="step" type="button" data-target="valueA" data-delta="1">+</button>
+          </span>
+        </div>
+
+        <div class="row">
+          <span class="letter-badge"><input class="letter-input" id="labelP" maxlength="3" value="P" aria-label="Fourth tally label"></span>
+          <span class="step-group">
+            <button class="step" type="button" data-target="valueP" data-delta="-1">−</button>
+            <input class="num" id="valueP" type="number" min="0" max="9999" step="1" value="0">
+            <button class="step" type="button" data-target="valueP" data-delta="1">+</button>
+          </span>
+        </div>
+
+        <div class="row">
+          <span class="letter-badge"><input class="letter-input" id="labelS" maxlength="3" value="S" aria-label="Fifth tally label"></span>
+          <span class="step-group">
+            <button class="step" type="button" data-target="valueS" data-delta="-1">−</button>
+            <input class="num" id="valueS" type="number" min="0" max="9999" step="1" value="0">
+            <button class="step" type="button" data-target="valueS" data-delta="1">+</button>
+          </span>
+        </div>
+      </section>
+
+      <section class="card calls" style="--d:.1s">
+        <div class="card-head">
+          <span class="dot"></span>
+          <span class="card-title">Calls</span>
+          <span class="card-tag">fresh dials</span>
+        </div>
+
+        <div class="row">
+          <span class="row-label">Calls</span>
+          <span class="step-group">
+            <button class="step" type="button" data-target="calls" data-delta="-1">−</button>
+            <input class="num" id="calls" type="number" min="0" max="9999" step="1" value="0">
+            <button class="step" type="button" data-target="calls" data-delta="1">+</button>
+          </span>
+        </div>
+
+        <div class="row">
+          <span class="row-label">Spoke To</span>
+          <span class="step-group">
+            <button class="step" type="button" data-target="callsSpoke" data-delta="-1">−</button>
+            <input class="num" id="callsSpoke" type="number" min="0" max="9999" step="1" value="0">
+            <button class="step" type="button" data-target="callsSpoke" data-delta="1">+</button>
+          </span>
+        </div>
+
+        <div class="row">
+          <span class="row-label">Booked</span>
+          <span class="step-group">
+            <button class="step" type="button" data-target="callsBooked" data-delta="-1">−</button>
+            <input class="num" id="callsBooked" type="number" min="0" max="9999" step="1" value="0">
+            <button class="step" type="button" data-target="callsBooked" data-delta="1">+</button>
+          </span>
+        </div>
+      </section>
+
+      <section class="card fc" style="--d:.15s">
+        <div class="card-head">
+          <span class="dot"></span>
+          <span class="card-title">Follow Up FC's</span>
+          <span class="card-tag">callbacks</span>
+        </div>
+
+        <div class="row">
+          <span class="row-label">Follow Up FC's</span>
+          <span class="step-group">
+            <button class="step" type="button" data-target="fcCalls" data-delta="-1">−</button>
+            <input class="num" id="fcCalls" type="number" min="0" max="9999" step="1" value="0">
+            <button class="step" type="button" data-target="fcCalls" data-delta="1">+</button>
+          </span>
+        </div>
+
+        <div class="row">
+          <span class="row-label">Spoke To</span>
+          <span class="step-group">
+            <button class="step" type="button" data-target="fcSpoke" data-delta="-1">−</button>
+            <input class="num" id="fcSpoke" type="number" min="0" max="9999" step="1" value="0">
+            <button class="step" type="button" data-target="fcSpoke" data-delta="1">+</button>
+          </span>
+        </div>
+
+        <div class="row">
+          <span class="row-label">Booked</span>
+          <span class="step-group">
+            <button class="step" type="button" data-target="fcBooked" data-delta="-1">−</button>
+            <input class="num" id="fcBooked" type="number" min="0" max="9999" step="1" value="0">
+            <button class="step" type="button" data-target="fcBooked" data-delta="1">+</button>
+          </span>
+        </div>
+
+        <div class="note-wrap">
+          <span class="paren">(</span>
+          <input class="note-input" id="fcNote" type="text" placeholder="e.g. 5 are FIFO, so callbacks">
+          <span class="paren">)</span>
+        </div>
+      </section>
+
+      <section class="card rec" style="--d:.2s">
+        <div class="card-head">
+          <span class="dot"></span>
+          <span class="card-title">Recruitment</span>
+          <span class="card-tag">inbound</span>
+        </div>
+
+        <div class="row">
+          <span class="row-label">Recruitment</span>
+          <span class="step-group">
+            <button class="step" type="button" data-target="recCalls" data-delta="-1">−</button>
+            <input class="num" id="recCalls" type="number" min="0" max="9999" step="1" value="0">
+            <button class="step" type="button" data-target="recCalls" data-delta="1">+</button>
+          </span>
+        </div>
+
+        <div class="row">
+          <span class="row-label">Spoke To</span>
+          <span class="step-group">
+            <button class="step" type="button" data-target="recSpoke" data-delta="-1">−</button>
+            <input class="num" id="recSpoke" type="number" min="0" max="9999" step="1" value="0">
+            <button class="step" type="button" data-target="recSpoke" data-delta="1">+</button>
+          </span>
+        </div>
+
+        <div class="row">
+          <span class="row-label">Booked</span>
+          <span class="step-group">
+            <button class="step" type="button" data-target="recBooked" data-delta="-1">−</button>
+            <input class="num" id="recBooked" type="number" min="0" max="9999" step="1" value="0">
+            <button class="step" type="button" data-target="recBooked" data-delta="1">+</button>
+          </span>
+        </div>
+      </section>
+    </div>
+
+    <aside class="col-right">
+      <section class="card preview" style="--d:.25s">
+        <div class="card-head">
+          <span class="live-dot"></span>
+          <span class="card-title">Output</span>
+          <span class="card-tag">live · exact format</span>
+        </div>
+        <div class="report" id="report"></div>
+        <div class="hint">Copy and paste directly into WhatsApp. The same layout is used every day.</div>
+      </section>
+
+      <div class="stats">
+        <div class="stat"><div class="v" id="totalDials">0</div><div class="l">Total Dials</div></div>
+        <div class="stat"><div class="v" id="totalSpoke">0</div><div class="l">Spoke To</div></div>
+        <div class="stat"><div class="v" id="totalBooked">0</div><div class="l">Booked</div></div>
+        <div class="stat"><div class="v" id="bookRate">–</div><div class="l">Book Rate</div></div>
+      </div>
+    </aside>
+  </div>
+</main>
+
+<script>
+(() => {
+  'use strict';
+
+  const STORAGE_KEY = 'asg-daily-stats-simple-v2';
+
+  const fieldIds = [
+    'repName',
+    'labelD','valueD',
+    'labelR','valueR',
+    'labelA','valueA',
+    'labelP','valueP',
+    'labelS','valueS',
+    'calls','callsSpoke','callsBooked',
+    'fcCalls','fcSpoke','fcBooked','fcNote',
+    'recCalls','recSpoke','recBooked'
+  ];
+
+  const numberIds = [
+    'valueD','valueR','valueA','valueP','valueS',
+    'calls','callsSpoke','callsBooked',
+    'fcCalls','fcSpoke','fcBooked',
+    'recCalls','recSpoke','recBooked'
+  ];
+
+  const byId = id => document.getElementById(id);
+
+  const numberValue = id => {
+    const value = Number.parseInt(byId(id).value,10);
+    return Number.isFinite(value) && value >= 0 ? value : 0;
+  };
+
+  const cleanNumberInput = input => {
+    const value = Math.max(0,Math.min(9999,Number.parseInt(input.value,10) || 0));
+    input.value = String(value);
+    return value;
+  };
+
+  const save = () => {
+    const data = {};
+    fieldIds.forEach(id => {
+      data[id] = byId(id).value;
+    });
+    localStorage.setItem(STORAGE_KEY,JSON.stringify(data));
+  };
+
+  const load = () => {
+    try{
+      const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
+      if(!saved || typeof saved !== 'object') return;
+      fieldIds.forEach(id => {
+        if(Object.prototype.hasOwnProperty.call(saved,id)){
+          byId(id).value = saved[id];
+        }
+      });
+    }catch(error){
+      console.warn('Saved daily stats could not be loaded.',error);
+    }
+  };
+
+  const buildReport = () => {
+    const repName = byId('repName').value.trim();
+    const heading = repName ? `${repName.toUpperCase()}\n\n` : '';
+
+    const labels = [
+      ['labelD','valueD'],
+      ['labelR','valueR'],
+      ['labelA','valueA'],
+      ['labelP','valueP'],
+      ['labelS','valueS']
+    ].map(([labelId,valueId]) => {
+      const label = byId(labelId).value.trim().toUpperCase() || '·';
+      return `${label}-${numberValue(valueId)}`;
+    }).join('\n');
+
+    const noteText = byId('fcNote').value.trim();
+    const note = noteText ? ` (${noteText})` : '';
+
+    return heading +
+      `${labels}\n\n` +
+      `Calls - ${numberValue('calls')}\n` +
+      `Spoke To - ${numberValue('callsSpoke')}\n` +
+      `Booked - ${numberValue('callsBooked')}\n\n` +
+      `Follow Up FC's - ${numberValue('fcCalls')}\n` +
+      `Spoke To - ${numberValue('fcSpoke')}${note}\n` +
+      `Booked - ${numberValue('fcBooked')}\n\n` +
+      `Recruitment - ${numberValue('recCalls')}\n` +
+      `Spoke To - ${numberValue('recSpoke')}\n` +
+      `Booked - ${numberValue('recBooked')}`;
+  };
+
+  const render = () => {
+    byId('report').textContent = buildReport();
+
+    const dials =
+      numberValue('calls') +
+      numberValue('fcCalls') +
+      numberValue('recCalls');
+
+    const spoke =
+      numberValue('callsSpoke') +
+      numberValue('fcSpoke') +
+      numberValue('recSpoke');
+
+    const booked =
+      numberValue('callsBooked') +
+      numberValue('fcBooked') +
+      numberValue('recBooked');
+
+    byId('totalDials').textContent = dials;
+    byId('totalSpoke').textContent = spoke;
+    byId('totalBooked').textContent = booked;
+    byId('bookRate').textContent = spoke ? `${Math.round((booked / spoke) * 100)}%` : '–';
+  };
+
+  const update = () => {
+    save();
+    render();
+  };
+
+  const copyText = async text => {
+    try{
+      await navigator.clipboard.writeText(text);
+      return true;
+    }catch(error){
+      const textarea = document.createElement('textarea');
+      textarea.value = text;
+      textarea.setAttribute('readonly','');
+      textarea.style.position = 'fixed';
+      textarea.style.opacity = '0';
+      document.body.appendChild(textarea);
+      textarea.select();
+      const copied = document.execCommand('copy');
+      textarea.remove();
+      return copied;
+    }
+  };
+
+  document.querySelectorAll('.num').forEach(input => {
+    input.addEventListener('focus',() => input.select());
+    input.addEventListener('input',() => {
+      if(input.value === '') return;
+      cleanNumberInput(input);
+      update();
+    });
+    input.addEventListener('change',() => {
+      cleanNumberInput(input);
+      update();
+    });
+  });
+
+  document.querySelectorAll('.letter-input').forEach(input => {
+    input.addEventListener('focus',() => input.select());
+    input.addEventListener('input',() => {
+      input.value = input.value.replace(/[^a-z0-9]/gi,'').slice(0,3).toUpperCase();
+      update();
+    });
+  });
+
+  ['repName','fcNote'].forEach(id => {
+    byId(id).addEventListener('input',update);
+  });
+
+  document.querySelectorAll('.step').forEach(button => {
+    button.addEventListener('click',() => {
+      const input = byId(button.dataset.target);
+      const nextValue = Math.max(0,Math.min(9999,numberValue(input.id) + Number(button.dataset.delta)));
+      input.value = String(nextValue);
+      update();
+    });
+  });
+
+  byId('copyBtn').addEventListener('click',async() => {
+    const button = byId('copyBtn');
+    const copied = await copyText(buildReport());
+
+    if(copied){
+      button.classList.add('done');
+      button.textContent = 'Copied ✓';
+      window.setTimeout(() => {
+        button.classList.remove('done');
+        button.textContent = 'Copy Report';
+      },1600);
+    }
+  });
+
+  byId('resetBtn').addEventListener('click',() => {
+    if(!window.confirm('Start a new day? All numbers and the note will reset to 0. The rep name and tally labels will be kept.')) return;
+
+    numberIds.forEach(id => {
+      byId(id).value = '0';
+    });
+
+    byId('fcNote').value = '';
+    update();
+  });
+
+  byId('dateChip').textContent =
+    new Intl.DateTimeFormat('en-AU',{
+      weekday:'long',
+      day:'2-digit',
+      month:'short',
+      year:'numeric'
+    }).format(new Date());
+
+  load();
+  numberIds.forEach(id => cleanNumberInput(byId(id)));
+  render();
+})();
+</script>
+</body>
+</html>
