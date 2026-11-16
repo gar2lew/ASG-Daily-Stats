@@ -159,7 +159,8 @@
     text-transform:uppercase;
   }
 
-  .rep-field input{
+  .rep-field input,
+  .rep-field select{
     width:100%;
     padding:11px 14px;
     border:1px solid var(--line);
@@ -171,9 +172,35 @@
     transition:border-color .2s,box-shadow .2s;
   }
 
-  .rep-field input:focus{
+  .rep-field input:focus,
+  .rep-field select:focus{
     border-color:var(--gold2);
     box-shadow:0 0 0 3px rgba(194,163,85,.22);
+  }
+
+  .rep-add{
+    margin-top:8px;
+    padding:4px 0;
+    border:0;
+    background:none;
+    color:var(--green);
+    font:600 13px 'IBM Plex Sans',sans-serif;
+    text-decoration:underline;
+    cursor:pointer;
+  }
+
+  #repAddForm{
+    margin-top:10px;
+    display:grid;
+    gap:8px;
+  }
+
+  #repAddForm[hidden]{display:none}
+
+  #repAddStatus{
+    margin:0;
+    color:#b00020;
+    font-size:13px;
   }
 
   .grid{
@@ -507,9 +534,67 @@
     .num{width:72px}
     .stats{grid-template-columns:repeat(2,1fr)}
   }
+  /* Gate screen: shown until a rep starts. Colours from the Irrevoccable Authority reference. */
+  body[data-view="gate"] .topbar,
+  body[data-view="gate"] main.app{display:none}
+  body[data-view="tally"] #gate{display:none}
+  .gate{
+    min-height:100vh;
+    display:grid;
+    gap:24px;
+    align-content:center;
+    padding:24px 16px;
+    background:#ece6d8;
+    color:#0a1f3d;
+  }
+  .gate-brand{text-align:center}
+  .gate-kicker{margin:0 0 8px;color:#8a6a2f;font:600 11px 'IBM Plex Mono',monospace;letter-spacing:.2em;text-transform:uppercase}
+  .gate-brand h1{margin:0;font:700 34px 'Archivo',sans-serif;color:#0a1f3d}
+  .gate-lede{margin:10px auto 0;max-width:34ch;color:#5f6a7a;font-size:15px}
+  .gate-panel{display:grid;gap:16px;width:100%;max-width:460px;margin:0 auto}
+  .gate-start{width:100%;min-height:44px;font-size:16px}
+  @media (min-width:768px){
+    .gate{grid-template-columns:1fr 1fr;align-items:center}
+    .gate-brand{text-align:left}
+    .gate-lede{margin-left:0}
+  }
 </style>
 </head>
-<body>
+<body data-view="gate">
+
+<section id="gate" class="gate" aria-labelledby="gateTitle">
+  <div class="gate-brand">
+    <p class="gate-kicker">ASG · Daily Stats</p>
+    <h1 id="gateTitle">Daily DRAPS Input</h1>
+    <p class="gate-lede">Choose your name, then press Start to enter today's figures.</p>
+  </div>
+  <div class="gate-panel">
+    <section class="card rep-card" style="--d:.02s">
+      <span class="rep-icon" aria-hidden="true">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#f5f1e8" stroke-width="2" stroke-linecap="round">
+          <circle cx="12" cy="8" r="4"></circle>
+          <path d="M4 20c0-4 4-6 8-6s8 2 8 6"></path>
+        </svg>
+      </span>
+      <div class="rep-field">
+        <label for="repName">Rep Name</label>
+        <select id="repName" autocomplete="off"><option value="">Loading names…</option></select>
+        <button type="button" id="repAddBtn" class="rep-add">Not on the list? Add my name</button>
+        <form id="repAddForm" hidden>
+          <input id="repNewName" type="text" maxlength="40" placeholder="Your name" autocomplete="name" aria-label="Your name">
+          <select id="repNewState" aria-label="State">
+            <option value="">State</option>
+            <option>NSW</option><option>ACT</option><option>VIC</option><option>QLD</option>
+            <option>SA</option><option>WA</option><option>TAS</option><option>NT</option>
+          </select>
+          <button type="submit" class="rep-add">Save name</button>
+          <p id="repAddStatus" role="status"></p>
+        </form>
+      </div>
+    </section>
+    <button type="button" id="gateStartBtn" class="btn gold gate-start" disabled>Start</button>
+  </div>
+</section>
 
 <header class="topbar">
   <div class="topbar-inner">
@@ -518,23 +603,12 @@
       <div class="date-chip" id="dateChip"></div>
       <button class="btn gold" id="copyBtn" type="button">Copy Report</button>
       <button class="btn ghost" id="resetBtn" type="button">New Day ⟲</button>
+      <button class="btn ghost" id="changeRepBtn" type="button" hidden>Change rep</button>
     </div>
   </div>
 </header>
 
 <main class="app">
-  <section class="card rep-card" style="--d:.02s">
-    <span class="rep-icon" aria-hidden="true">
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#f5f1e8" stroke-width="2" stroke-linecap="round">
-        <circle cx="12" cy="8" r="4"></circle>
-        <path d="M4 20c0-4 4-6 8-6s8 2 8 6"></path>
-      </svg>
-    </span>
-    <div class="rep-field">
-      <label for="repName">Rep Name</label>
-      <input id="repName" type="text" placeholder="e.g. Josh" autocomplete="name">
-    </div>
-  </section>
 
   <div class="grid">
     <div class="col-left">
@@ -723,6 +797,7 @@
   // Serverless API routes live in /api (Vercel). Secrets and recipients are environment variables, never in this file.
   const API_PUBLISH = '/api/publish';
   const API_EMAIL = '/api/email';
+  const API_REPS = '/api/reps';
 
   const fieldIds = [
     'repName',
@@ -916,10 +991,13 @@
     update();
   });
 
-  // Today's date and weekday in Perth, regardless of the device's time zone.
-  const perthToday = () => {
+  // Today's date and weekday in the selected rep's timezone, not the device's.
+  // Until a rep is chosen, Perth is used; publishing is blocked without a rep anyway.
+  const repToday = () => {
+    const rep = repList.find(r => r.name === byId('repName').value);
+    const timeZone = rep ? rep.timezone : 'Australia/Perth';
     const parts = new Intl.DateTimeFormat('en-AU',{
-      timeZone:'Australia/Perth',
+      timeZone,
       weekday:'long',
       day:'2-digit',
       month:'2-digit',
@@ -935,7 +1013,7 @@
   const buildSubject = record => `DRAPS - ${record.rep} - ${record.day} - ${record.date}`;
 
   const buildRecord = () => {
-    const today = perthToday();
+    const today = repToday();
     const record = {
       date: today.date,
       day: today.weekday,
@@ -977,22 +1055,22 @@
     return entered;
   };
 
-  const sendRequest = (path,body,passcode) => fetch(path,{
-    method:'POST',
+  const sendRequest = (path,method,body,passcode) => fetch(path,{
+    method,
     headers:{'Content-Type':'application/json','x-draps-passcode':passcode},
-    body:JSON.stringify(body)
+    body: method === 'GET' ? undefined : JSON.stringify(body)
   });
 
-  const postJson = async (path,body) => {
+  const requestJson = async (path,method,body) => {
     let passcode = readPasscode() || askPasscode();
     if (!passcode) throw new Error('A passcode is required');
-    let response = await sendRequest(path,body,passcode);
+    let response = await sendRequest(path,method,body,passcode);
 
     if (response.status === 401) {
       clearPasscode();
       passcode = askPasscode();
       if (!passcode) throw new Error('A passcode is required');
-      response = await sendRequest(path,body,passcode);
+      response = await sendRequest(path,method,body,passcode);
       if (response.status === 401) clearPasscode();
     }
 
@@ -1000,6 +1078,8 @@
     if(!response.ok || !result.ok) throw new Error(result.error || 'Request failed');
     return result;
   };
+
+  const postJson = (path,body) => requestJson(path,'POST',body);
 
   const setStatus = (message,tone = '') => {
     const status = byId('actionStatus');
@@ -1056,13 +1136,107 @@
     }
   });
 
-  byId('dateChip').textContent =
-    new Intl.DateTimeFormat('en-AU',{
-      weekday:'long',
-      day:'2-digit',
-      month:'short',
-      year:'numeric'
-    }).format(new Date());
+  // Date chip shows the selected rep's date and weekday. Until a rep is chosen, Perth is used.
+  const MONTHS_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const updateDateChip = () => {
+    const today = repToday();
+    const [day, month, year] = today.date.split('/');
+    byId('dateChip').textContent = `${today.weekday}, ${Number(day)} ${MONTHS_SHORT[Number(month) - 1]} ${year}`;
+  };
+
+  // Rep list: shared, from /api/reps. Only the chosen name is remembered on this device.
+  const REP_KEY = 'drapsRepName';
+  let repList = [];
+
+  const readRepName = () => {
+    try { return localStorage.getItem(REP_KEY) || ''; } catch { return ''; }
+  };
+
+  const saveRepName = name => {
+    try { localStorage.setItem(REP_KEY, name); } catch { /* preselect is lost; the list still works */ }
+  };
+
+  const setRepOptions = selectedName => {
+    const select = byId('repName');
+    select.innerHTML = '';
+    select.add(new Option('Choose your name', ''));
+    repList.forEach(rep => select.add(new Option(rep.name, rep.name)));
+    select.value = repList.some(r => r.name === selectedName) ? selectedName : '';
+    updateStartButton();
+  };
+
+  const updateStartButton = () => {
+    byId('gateStartBtn').disabled = !repList.some(r => r.name === byId('repName').value);
+  };
+
+  const showView = view => {
+    document.body.dataset.view = view;
+    byId('changeRepBtn').hidden = view !== 'tally';
+  };
+
+  const loadReps = async () => {
+    try {
+      const result = await requestJson(API_REPS,'GET');
+      repList = result.reps;
+      setRepOptions(readRepName());
+      updateDateChip();
+    } catch (error) {
+      byId('repName').innerHTML = '<option value="">Could not load names</option>';
+      setStatus(`Could not load rep names: ${error.message}`,'error');
+    }
+    update();
+  };
+
+  byId('repAddBtn').addEventListener('click',() => {
+    const form = byId('repAddForm');
+    form.hidden = !form.hidden;
+    if(!form.hidden) byId('repNewName').focus();
+  });
+
+  byId('repAddForm').addEventListener('submit',async event => {
+    event.preventDefault();
+    const status = byId('repAddStatus');
+    status.textContent = 'Saving…';
+    try {
+      const result = await postJson(API_REPS,{
+        name:byId('repNewName').value,
+        state:byId('repNewState').value
+      });
+      if(!repList.some(r => r.name === result.rep.name)) repList.push(result.rep);
+      repList.sort((a,b) => a.name.localeCompare(b.name));
+      setRepOptions(result.rep.name);
+      saveRepName(result.rep.name);
+      updateDateChip();
+      byId('repAddForm').reset();
+      byId('repAddForm').hidden = true;
+      status.textContent = '';
+      update();
+    } catch (error) {
+      status.textContent = error.message;
+    }
+  });
+
+  byId('repName').addEventListener('change',() => {
+    saveRepName(byId('repName').value);
+    updateStartButton();
+    updateDateChip();
+    update();
+  });
+
+  byId('gateStartBtn').addEventListener('click',() => {
+    showView('tally');
+    updateDateChip();
+    update();
+  });
+
+  byId('changeRepBtn').addEventListener('click',() => {
+    showView('gate');
+    updateStartButton();
+  });
+
+  showView('gate');
+
+  loadReps();
 
   load();
   numberIds.forEach(id => cleanNumberInput(byId(id)));
