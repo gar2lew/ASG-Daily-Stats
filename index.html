@@ -585,6 +585,8 @@
   .gate-line-l{background:linear-gradient(90deg,transparent,#b8924a)}
   .gate-line-r{background:linear-gradient(90deg,#b8924a,transparent)}
   .gate-copy{margin:18px 0 0;color:#3a4a63;font-size:14.5px;line-height:1.6}
+  .gate-portal{margin-top:4px;color:#8a6a2f;font:500 14px 'IBM Plex Sans',sans-serif;text-decoration:underline;text-underline-offset:3px}
+  .gate-portal:focus-visible{outline:2px solid #b8924a;outline-offset:3px}
   @media (min-width:900px){
     .gate-edge{display:block}
     .gate-h2{font-size:40px}
@@ -658,6 +660,7 @@
     </section>
     <p id="gateStatus" class="gate-status" role="alert"></p>
     <button type="button" id="gateStartBtn" class="btn gold gate-start" disabled>Start</button>
+    <a class="gate-portal" href="/portal.html">Staff portal</a>
   </div>
 </section>
 
@@ -669,6 +672,7 @@
       <button class="btn gold" id="copyBtn" type="button">Copy Report</button>
       <button class="btn ghost" id="resetBtn" type="button">New Day ⟲</button>
       <button class="btn ghost" id="changeRepBtn" type="button" hidden>Change rep</button>
+      <a class="btn ghost" href="/portal.html">Staff portal</a>
     </div>
   </div>
 </header>
