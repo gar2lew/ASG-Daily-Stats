@@ -159,7 +159,8 @@
     text-transform:uppercase;
   }
 
-  .rep-field input{
+  .rep-field input,
+  .rep-field select{
     width:100%;
     padding:11px 14px;
     border:1px solid var(--line);
@@ -171,9 +172,35 @@
     transition:border-color .2s,box-shadow .2s;
   }
 
-  .rep-field input:focus{
+  .rep-field input:focus,
+  .rep-field select:focus{
     border-color:var(--gold2);
     box-shadow:0 0 0 3px rgba(194,163,85,.22);
+  }
+
+  .rep-add{
+    margin-top:8px;
+    padding:4px 0;
+    border:0;
+    background:none;
+    color:var(--green);
+    font:600 13px 'IBM Plex Sans',sans-serif;
+    text-decoration:underline;
+    cursor:pointer;
+  }
+
+  #repAddForm{
+    margin-top:10px;
+    display:grid;
+    gap:8px;
+  }
+
+  #repAddForm[hidden]{display:none}
+
+  #repAddStatus{
+    margin:0;
+    color:#b00020;
+    font-size:13px;
   }
 
   .grid{
@@ -532,7 +559,18 @@
     </span>
     <div class="rep-field">
       <label for="repName">Rep Name</label>
-      <input id="repName" type="text" placeholder="e.g. Josh" autocomplete="name">
+      <select id="repName" autocomplete="off"><option value="">Loading names…</option></select>
+      <button type="button" id="repAddBtn" class="rep-add">Not on the list? Add my name</button>
+      <form id="repAddForm" hidden>
+        <input id="repNewName" type="text" maxlength="40" placeholder="Your name" autocomplete="name" aria-label="Your name">
+        <select id="repNewState" aria-label="State">
+          <option value="">State</option>
+          <option>NSW</option><option>ACT</option><option>VIC</option><option>QLD</option>
+          <option>SA</option><option>WA</option><option>TAS</option><option>NT</option>
+        </select>
+        <button type="submit" class="rep-add">Save name</button>
+        <p id="repAddStatus" role="status"></p>
+      </form>
     </div>
   </section>
 
@@ -723,6 +761,7 @@
   // Serverless API routes live in /api (Vercel). Secrets and recipients are environment variables, never in this file.
   const API_PUBLISH = '/api/publish';
   const API_EMAIL = '/api/email';
+  const API_REPS = '/api/reps';
 
   const fieldIds = [
     'repName',
@@ -916,10 +955,13 @@
     update();
   });
 
-  // Today's date and weekday in Perth, regardless of the device's time zone.
-  const perthToday = () => {
+  // Today's date and weekday in the selected rep's timezone, not the device's.
+  // Until a rep is chosen, Perth is used; publishing is blocked without a rep anyway.
+  const repToday = () => {
+    const rep = repList.find(r => r.name === byId('repName').value);
+    const timeZone = rep ? rep.timezone : 'Australia/Perth';
     const parts = new Intl.DateTimeFormat('en-AU',{
-      timeZone:'Australia/Perth',
+      timeZone,
       weekday:'long',
       day:'2-digit',
       month:'2-digit',
@@ -935,7 +977,7 @@
   const buildSubject = record => `DRAPS - ${record.rep} - ${record.day} - ${record.date}`;
 
   const buildRecord = () => {
-    const today = perthToday();
+    const today = repToday();
     const record = {
       date: today.date,
       day: today.weekday,
@@ -977,22 +1019,22 @@
     return entered;
   };
 
-  const sendRequest = (path,body,passcode) => fetch(path,{
-    method:'POST',
+  const sendRequest = (path,method,body,passcode) => fetch(path,{
+    method,
     headers:{'Content-Type':'application/json','x-draps-passcode':passcode},
-    body:JSON.stringify(body)
+    body: method === 'GET' ? undefined : JSON.stringify(body)
   });
 
-  const postJson = async (path,body) => {
+  const requestJson = async (path,method,body) => {
     let passcode = readPasscode() || askPasscode();
     if (!passcode) throw new Error('A passcode is required');
-    let response = await sendRequest(path,body,passcode);
+    let response = await sendRequest(path,method,body,passcode);
 
     if (response.status === 401) {
       clearPasscode();
       passcode = askPasscode();
       if (!passcode) throw new Error('A passcode is required');
-      response = await sendRequest(path,body,passcode);
+      response = await sendRequest(path,method,body,passcode);
       if (response.status === 401) clearPasscode();
     }
 
@@ -1000,6 +1042,8 @@
     if(!response.ok || !result.ok) throw new Error(result.error || 'Request failed');
     return result;
   };
+
+  const postJson = (path,body) => requestJson(path,'POST',body);
 
   const setStatus = (message,tone = '') => {
     const status = byId('actionStatus');
@@ -1063,6 +1107,73 @@
       month:'short',
       year:'numeric'
     }).format(new Date());
+
+  // Rep list: shared, from /api/reps. Only the chosen name is remembered on this device.
+  const REP_KEY = 'drapsRepName';
+  let repList = [];
+
+  const readRepName = () => {
+    try { return localStorage.getItem(REP_KEY) || ''; } catch { return ''; }
+  };
+
+  const saveRepName = name => {
+    try { localStorage.setItem(REP_KEY, name); } catch { /* preselect is lost; the list still works */ }
+  };
+
+  const setRepOptions = selectedName => {
+    const select = byId('repName');
+    select.innerHTML = '';
+    select.add(new Option('Choose your name', ''));
+    repList.forEach(rep => select.add(new Option(rep.name, rep.name)));
+    select.value = repList.some(r => r.name === selectedName) ? selectedName : '';
+  };
+
+  const loadReps = async () => {
+    try {
+      const result = await requestJson(API_REPS,'GET');
+      repList = result.reps;
+      setRepOptions(readRepName());
+    } catch (error) {
+      byId('repName').innerHTML = '<option value="">Could not load names</option>';
+      setStatus(`Could not load rep names: ${error.message}`,'error');
+    }
+    update();
+  };
+
+  byId('repAddBtn').addEventListener('click',() => {
+    const form = byId('repAddForm');
+    form.hidden = !form.hidden;
+    if(!form.hidden) byId('repNewName').focus();
+  });
+
+  byId('repAddForm').addEventListener('submit',async event => {
+    event.preventDefault();
+    const status = byId('repAddStatus');
+    status.textContent = 'Saving…';
+    try {
+      const result = await postJson(API_REPS,{
+        name:byId('repNewName').value,
+        state:byId('repNewState').value
+      });
+      if(!repList.some(r => r.name === result.rep.name)) repList.push(result.rep);
+      repList.sort((a,b) => a.name.localeCompare(b.name));
+      setRepOptions(result.rep.name);
+      saveRepName(result.rep.name);
+      byId('repAddForm').reset();
+      byId('repAddForm').hidden = true;
+      status.textContent = '';
+      update();
+    } catch (error) {
+      status.textContent = error.message;
+    }
+  });
+
+  byId('repName').addEventListener('change',() => {
+    saveRepName(byId('repName').value);
+    update();
+  });
+
+  loadReps();
 
   load();
   numberIds.forEach(id => cleanNumberInput(byId(id)));
