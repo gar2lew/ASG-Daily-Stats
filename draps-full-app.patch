@@ -1,0 +1,1091 @@
+diff --git a/.gitignore b/.gitignore
+new file mode 100644
+index 0000000..c2658d7
+--- /dev/null
++++ b/.gitignore
+@@ -0,0 +1 @@
++node_modules/
+diff --git a/README.md b/README.md
+index 2ff9a55..7e67e47 100644
+--- a/README.md
++++ b/README.md
+@@ -1,3 +1,25 @@
+ # ASG Daily Stats
+ 
+-Static single-file interim deployment for ASG daily stats.
++Vercel-hosted DRAPS daily stats app: `index.html` plus two serverless routes.
++
++- `index.html`: the daily tally UI, with **Publish Results** and **Send to Management**.
++- `api/publish.js`: writes one row per rep per day to the `DRAPS Log` tab of a Google Sheet. Republishing the same date and rep updates that row.
++- `api/email.js`: sends the WhatsApp-format report to the management recipients, subject `DRAPS - Rep Name - Day - DD/MM/YYYY` (Perth time).
++- `lib/draps.js`: shared column order and input validation.
++
++## Environment variables (Vercel project settings)
++
++| Name | Value |
++| --- | --- |
++| `GOOGLE_SERVICE_ACCOUNT_JSON` | Full JSON key of a Google service account |
++| `SHEET_ID` | ID from the spreadsheet URL (`/d/<SHEET_ID>/edit`) |
++| `GMAIL_USER` | Gmail address that sends the email |
++| `GMAIL_APP_PASSWORD` | Gmail app password (requires 2-Step Verification) |
++| `MANAGEMENT_RECIPIENTS` | Comma-separated list of management email addresses |
++
++Share the spreadsheet with the service account's email address as Editor.
++
++## Local check
++
++    npm install
++    npm run check
+diff --git a/api/email.js b/api/email.js
+new file mode 100644
+index 0000000..e9089d5
+--- /dev/null
++++ b/api/email.js
+@@ -0,0 +1,43 @@
++import nodemailer from 'nodemailer';
++import { assertEnv } from '../lib/draps.js';
++
++// Subject must be exactly: DRAPS - Rep Name - Day - DD/MM/YYYY
++const SUBJECT_PATTERN = /^DRAPS - [^\r\n]{1,120} - (Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday) - \d{2}\/\d{2}\/\d{4}$/;
++
++// POST /api/email  { subject, body }
++export default async function handler(req, res) {
++  if (req.method !== 'POST') return res.status(405).json({ ok: false, error: 'Method not allowed' });
++
++  try {
++    assertEnv(['GMAIL_USER', 'GMAIL_APP_PASSWORD', 'MANAGEMENT_RECIPIENTS']);
++
++    const subject = typeof req.body?.subject === 'string' ? req.body.subject.trim() : '';
++    const body = typeof req.body?.body === 'string' ? req.body.body : '';
++
++    if (!SUBJECT_PATTERN.test(subject)) return res.status(400).json({ ok: false, error: 'Subject format is invalid' });
++    if (!body || body.length > 10000) return res.status(400).json({ ok: false, error: 'Report body is missing or too long' });
++
++    const recipients = process.env.MANAGEMENT_RECIPIENTS.split(',').map(s => s.trim()).filter(Boolean);
++    if (!recipients.length) return res.status(500).json({ ok: false, error: 'No management recipients configured' });
++
++    const transporter = nodemailer.createTransport({
++      service: 'gmail',
++      auth: {
++        user: process.env.GMAIL_USER,
++        pass: process.env.GMAIL_APP_PASSWORD,
++      },
++    });
++
++    await transporter.sendMail({
++      from: process.env.GMAIL_USER,
++      to: recipients,
++      subject,
++      text: body,
++    });
++
++    return res.status(200).json({ ok: true });
++  } catch (error) {
++    console.error('email failed', error);
++    return res.status(500).json({ ok: false, error: 'Email could not be sent. Check the server logs.' });
++  }
++}
+diff --git a/api/publish.js b/api/publish.js
+new file mode 100644
+index 0000000..35118fc
+--- /dev/null
++++ b/api/publish.js
+@@ -0,0 +1,82 @@
++import { google } from 'googleapis';
++import { COLUMNS, SHEET_TAB, validateRecord, assertEnv } from '../lib/draps.js';
++
++// POST /api/publish  { record }
++// Writes one row per rep per date to the DRAPS Log tab. Republishing the same
++// date and rep updates that row instead of adding a duplicate.
++export default async function handler(req, res) {
++  if (req.method !== 'POST') return res.status(405).json({ ok: false, error: 'Method not allowed' });
++
++  try {
++    assertEnv(['GOOGLE_SERVICE_ACCOUNT_JSON', 'SHEET_ID']);
++
++    const checked = validateRecord(req.body?.record);
++    if (!checked.ok) return res.status(400).json(checked);
++    const { record } = checked;
++
++    const credentials = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_JSON);
++    const auth = new google.auth.GoogleAuth({
++      credentials,
++      scopes: ['https://www.googleapis.com/auth/spreadsheets'],
++    });
++    const sheets = google.sheets({ version: 'v4', auth });
++    const spreadsheetId = process.env.SHEET_ID;
++
++    await ensureTab(sheets, spreadsheetId);
++
++    const row = COLUMNS.map(([, key]) => record[key] ?? '');
++    const range = `'${SHEET_TAB}'!A:A`;
++    const existing = await sheets.spreadsheets.values.get({
++      spreadsheetId,
++      range: `'${SHEET_TAB}'!A:C`,
++    });
++
++    const rows = existing.data.values || [];
++    const index = rows.findIndex((r, i) => i > 0 && r[0] === record.date && (r[2] || '').trim() === record.rep);
++
++    if (index > 0) {
++      const rowNumber = index + 1;
++      await sheets.spreadsheets.values.update({
++        spreadsheetId,
++        range: `'${SHEET_TAB}'!A${rowNumber}`,
++        valueInputOption: 'USER_ENTERED',
++        requestBody: { values: [row] },
++      });
++      return res.status(200).json({ ok: true, mode: 'updated' });
++    }
++
++    if (rows.length === 0) {
++      await sheets.spreadsheets.values.update({
++        spreadsheetId,
++        range: `'${SHEET_TAB}'!A1`,
++        valueInputOption: 'RAW',
++        requestBody: { values: [COLUMNS.map(([header]) => header)] },
++      });
++    }
++
++    await sheets.spreadsheets.values.append({
++      spreadsheetId,
++      range,
++      valueInputOption: 'USER_ENTERED',
++      insertDataOption: 'INSERT_ROWS',
++      requestBody: { values: [row] },
++    });
++
++    return res.status(200).json({ ok: true, mode: 'added' });
++  } catch (error) {
++    console.error('publish failed', error);
++    return res.status(500).json({ ok: false, error: 'Could not write to the spreadsheet. Check the server logs.' });
++  }
++}
++
++// Creates the DRAPS Log tab if the spreadsheet does not have it yet.
++async function ensureTab(sheets, spreadsheetId) {
++  const meta = await sheets.spreadsheets.get({ spreadsheetId, fields: 'sheets.properties.title' });
++  const exists = meta.data.sheets.some(s => s.properties.title === SHEET_TAB);
++  if (exists) return;
++
++  await sheets.spreadsheets.batchUpdate({
++    spreadsheetId,
++    requestBody: { requests: [{ addSheet: { properties: { title: SHEET_TAB } } }] },
++  });
++}
+diff --git a/index.html b/index.html
+index 596e66e..2a4127d 100644
+--- a/index.html
++++ b/index.html
+@@ -436,6 +436,56 @@
+   .stat:nth-child(1) .v,.stat:nth-child(3) .v{color:var(--green)}
+   .stat:nth-child(2) .v,.stat:nth-child(4) .v{color:var(--gold-deep)}
+ 
++  .btn.dark{
++    background:var(--navy);
++    color:#f5f1e8;
++    box-shadow:0 6px 18px -8px rgba(14,26,47,.7);
++  }
++
++  .btn.dark:hover{
++    background:var(--navy2);
++    transform:translateY(-2px);
++  }
++
++  .btn:disabled{
++    opacity:.55;
++    cursor:wait;
++    transform:none;
++  }
++
++  .action-bar{
++    margin-top:20px;
++    display:flex;
++    align-items:center;
++    justify-content:space-between;
++    gap:16px;
++    flex-wrap:wrap;
++    border-left:5px solid var(--navy2);
++  }
++
++  .action-title{
++    color:var(--navy2);
++    font-family:'Archivo',sans-serif;
++    font-weight:800;
++    font-size:16px;
++  }
++
++  .action-status{
++    margin-top:4px;
++    min-height:16px;
++    color:var(--muted);
++    font:400 12px 'IBM Plex Mono',monospace;
++  }
++
++  .action-status[data-tone="success"]{color:var(--green)}
++  .action-status[data-tone="error"]{color:#a23b2c}
++
++  .action-buttons{
++    display:flex;
++    gap:10px;
++    flex-wrap:wrap;
++  }
++
+   @keyframes rise{
+     from{opacity:0;transform:translateY(16px)}
+     to{opacity:1;transform:translateY(0)}
+@@ -651,6 +701,17 @@
+       </div>
+     </aside>
+   </div>
++
++  <section class="card action-bar" style="--d:.3s">
++    <div>
++      <div class="action-title">End of Day</div>
++      <div class="action-status" id="actionStatus" role="status" aria-live="polite"></div>
++    </div>
++    <div class="action-buttons">
++      <button class="btn dark" id="publishBtn" type="button">Publish Results</button>
++      <button class="btn gold" id="emailBtn" type="button">Send to Management</button>
++    </div>
++  </section>
+ </main>
+ 
+ <script>
+@@ -659,6 +720,10 @@
+ 
+   const STORAGE_KEY = 'asg-daily-stats-simple-v2';
+ 
++  // Serverless API routes live in /api (Vercel). Secrets and recipients are environment variables, never in this file.
++  const API_PUBLISH = '/api/publish';
++  const API_EMAIL = '/api/email';
++
+   const fieldIds = [
+     'repName',
+     'labelD','valueD',
+@@ -851,6 +916,117 @@
+     update();
+   });
+ 
++  // Today's date and weekday in Perth, regardless of the device's time zone.
++  const perthToday = () => {
++    const parts = new Intl.DateTimeFormat('en-AU',{
++      timeZone:'Australia/Perth',
++      weekday:'long',
++      day:'2-digit',
++      month:'2-digit',
++      year:'numeric'
++    }).formatToParts(new Date());
++    const part = type => parts.find(p => p.type === type).value;
++    return {
++      weekday: part('weekday'),
++      date: `${part('day')}/${part('month')}/${part('year')}`
++    };
++  };
++
++  const buildSubject = record => `DRAPS - ${record.rep} - ${record.day} - ${record.date}`;
++
++  const buildRecord = () => {
++    const today = perthToday();
++    const record = {
++      date: today.date,
++      day: today.weekday,
++      rep: byId('repName').value.trim()
++    };
++
++    ['D','R','A','P','S'].forEach(letter => {
++      const key = letter.toLowerCase();
++      record[`${key}Label`] = byId(`label${letter}`).value.trim().toUpperCase();
++      record[`${key}Value`] = numberValue(`value${letter}`);
++    });
++
++    ['leadCalls','firstConsultCalls','financeRunCalls','coffeeRunCalls',
++     'fcCalls','fcSpoke','fcBooked','recCalls','recSpoke','recBooked'].forEach(id => {
++      record[id] = numberValue(id);
++    });
++
++    record.fcNote = byId('fcNote').value.trim();
++    record.totalCalls = record.leadCalls + record.firstConsultCalls + record.financeRunCalls + record.coffeeRunCalls;
++    record.totalSpoke = record.fcSpoke + record.recSpoke;
++    record.totalBooked = record.fcBooked + record.recBooked;
++    record.bookRate = record.totalSpoke ? `${Math.round((record.totalBooked / record.totalSpoke) * 100)}%` : '–';
++    return record;
++  };
++
++  const postJson = async (path,body) => {
++    const response = await fetch(path,{
++      method:'POST',
++      headers:{'Content-Type':'application/json'},
++      body:JSON.stringify(body)
++    });
++    const result = await response.json().catch(() => ({ok:false,error:`Server returned ${response.status}`}));
++    if(!response.ok || !result.ok) throw new Error(result.error || 'Request failed');
++    return result;
++  };
++
++  const setStatus = (message,tone = '') => {
++    const status = byId('actionStatus');
++    status.textContent = message;
++    status.dataset.tone = tone;
++  };
++
++  const setBusy = (button,busy,label) => {
++    button.disabled = busy;
++    button.textContent = label;
++  };
++
++  const requireRepName = record => {
++    if(record.rep) return true;
++    setStatus('Enter a rep name before publishing or sending.','error');
++    byId('repName').focus();
++    return false;
++  };
++
++  byId('publishBtn').addEventListener('click',async() => {
++    const button = byId('publishBtn');
++    const record = buildRecord();
++    if(!requireRepName(record)) return;
++
++    setBusy(button,true,'Publishing…');
++    setStatus('Publishing to spreadsheet…');
++    try{
++      const result = await postJson(API_PUBLISH,{record});
++      setStatus(`Published ${record.rep} · ${record.date} (${result.mode}).`,'success');
++    }catch(error){
++      setStatus(`Publish failed: ${error.message}`,'error');
++    }finally{
++      setBusy(button,false,'Publish Results');
++    }
++  });
++
++  byId('emailBtn').addEventListener('click',async() => {
++    const button = byId('emailBtn');
++    const record = buildRecord();
++    if(!requireRepName(record)) return;
++
++    const subject = buildSubject(record);
++    if(!window.confirm(`Send this report to management now?\n\n${subject}`)) return;
++
++    setBusy(button,true,'Sending…');
++    setStatus('Sending email…');
++    try{
++      await postJson(API_EMAIL,{subject,body:buildReport()});
++      setStatus(`Sent: ${subject}`,'success');
++    }catch(error){
++      setStatus(`Send failed: ${error.message}`,'error');
++    }finally{
++      setBusy(button,false,'Send to Management');
++    }
++  });
++
+   byId('dateChip').textContent =
+     new Intl.DateTimeFormat('en-AU',{
+       weekday:'long',
+diff --git a/lib/draps.js b/lib/draps.js
+new file mode 100644
+index 0000000..10fb2e4
+--- /dev/null
++++ b/lib/draps.js
+@@ -0,0 +1,63 @@
++// Shared definitions for the DRAPS API routes.
++
++export const SHEET_TAB = 'DRAPS Log';
++
++// Column order in the spreadsheet: [header, key in the record sent from index.html]
++export const COLUMNS = [
++  ['Date', 'date'],
++  ['Day', 'day'],
++  ['Rep', 'rep'],
++  ['D Label', 'dLabel'], ['D', 'dValue'],
++  ['R Label', 'rLabel'], ['R', 'rValue'],
++  ['A Label', 'aLabel'], ['A', 'aValue'],
++  ['P Label', 'pLabel'], ['P', 'pValue'],
++  ['S Label', 'sLabel'], ['S', 'sValue'],
++  ['Lead Calls', 'leadCalls'],
++  ['First Consult Calls', 'firstConsultCalls'],
++  ['Finance Run Calls', 'financeRunCalls'],
++  ['Coffee Run Calls', 'coffeeRunCalls'],
++  ['Total Calls', 'totalCalls'],
++  ["Follow Up FC's", 'fcCalls'],
++  ['FC Spoke To', 'fcSpoke'],
++  ['FC Booked', 'fcBooked'],
++  ['FC Note', 'fcNote'],
++  ['Recruitment', 'recCalls'],
++  ['Rec Spoke To', 'recSpoke'],
++  ['Rec Booked', 'recBooked'],
++  ['Total Spoke To', 'totalSpoke'],
++  ['Total Booked', 'totalBooked'],
++  ['Book Rate', 'bookRate'],
++];
++
++const NUMERIC_KEYS = [
++  'dValue', 'rValue', 'aValue', 'pValue', 'sValue',
++  'leadCalls', 'firstConsultCalls', 'financeRunCalls', 'coffeeRunCalls',
++  'fcCalls', 'fcSpoke', 'fcBooked', 'recCalls', 'recSpoke', 'recBooked',
++  'totalCalls', 'totalSpoke', 'totalBooked',
++];
++
++const TEXT_KEYS = ['date', 'day', 'rep', 'dLabel', 'rLabel', 'aLabel', 'pLabel', 'sLabel', 'fcNote', 'bookRate'];
++
++// Validates and normalises a record from the browser. Returns { ok, record, error }.
++export function validateRecord(input) {
++  if (!input || typeof input !== 'object') return { ok: false, error: 'Missing record' };
++
++  const record = {};
++  for (const key of TEXT_KEYS) {
++    const value = input[key];
++    record[key] = typeof value === 'string' ? value.trim().slice(0, 120) : '';
++  }
++  for (const key of NUMERIC_KEYS) {
++    const value = Number.parseInt(input[key], 10);
++    record[key] = Number.isFinite(value) && value >= 0 ? Math.min(value, 9999) : 0;
++  }
++
++  if (!record.rep) return { ok: false, error: 'Rep name is required' };
++  if (!/^\d{2}\/\d{2}\/\d{4}$/.test(record.date)) return { ok: false, error: 'Date must be DD/MM/YYYY' };
++  return { ok: true, record };
++}
++
++export function assertEnv(names) {
++  const missing = names.filter(name => !process.env[name]);
++  if (missing.length) throw new Error(`Missing environment variables: ${missing.join(', ')}`);
++}
+diff --git a/package-lock.json b/package-lock.json
+new file mode 100644
+index 0000000..ef62e34
+--- /dev/null
++++ b/package-lock.json
+@@ -0,0 +1,610 @@
++{
++  "name": "asg-daily-stats",
++  "version": "1.1.0",
++  "lockfileVersion": 3,
++  "requires": true,
++  "packages": {
++    "": {
++      "name": "asg-daily-stats",
++      "version": "1.1.0",
++      "dependencies": {
++        "googleapis": "^144.0.0",
++        "nodemailer": "^6.9.16"
++      },
++      "engines": {
++        "node": ">=18"
++      }
++    },
++    "node_modules/agent-base": {
++      "version": "7.1.4",
++      "resolved": "https://registry.npmjs.org/agent-base/-/agent-base-7.1.4.tgz",
++      "integrity": "sha512-MnA+YT8fwfJPgBx3m60MNqakm30XOkyIoH1y6huTQvC0PwZG7ki8NacLBcrPbNoo8vEZy7Jpuk7+jMO+CUovTQ==",
++      "license": "MIT",
++      "engines": {
++        "node": ">= 14"
++      }
++    },
++    "node_modules/base64-js": {
++      "version": "1.5.1",
++      "resolved": "https://registry.npmjs.org/base64-js/-/base64-js-1.5.1.tgz",
++      "integrity": "sha512-AKpaYlHn8t4SVbOHCy+b5+KKgvR4vrsD8vbvrbiQJps7fKDTkjkDry6ji0rUJjC0kzbNePLwzxq8iypo41qeWA==",
++      "funding": [
++        {
++          "type": "github",
++          "url": "https://github.com/sponsors/feross"
++        },
++        {
++          "type": "patreon",
++          "url": "https://www.patreon.com/feross"
++        },
++        {
++          "type": "consulting",
++          "url": "https://feross.org/support"
++        }
++      ],
++      "license": "MIT"
++    },
++    "node_modules/bignumber.js": {
++      "version": "9.3.1",
++      "resolved": "https://registry.npmjs.org/bignumber.js/-/bignumber.js-9.3.1.tgz",
++      "integrity": "sha512-Ko0uX15oIUS7wJ3Rb30Fs6SkVbLmPBAKdlm7q9+ak9bbIeFf0MwuBsQV6z7+X768/cHsfg+WlysDWJcmthjsjQ==",
++      "license": "MIT",
++      "engines": {
++        "node": "*"
++      }
++    },
++    "node_modules/buffer-equal-constant-time": {
++      "version": "1.0.1",
++      "resolved": "https://registry.npmjs.org/buffer-equal-constant-time/-/buffer-equal-constant-time-1.0.1.tgz",
++      "integrity": "sha512-zRpUiDwd/xk6ADqPMATG8vc9VPrkck7T07OIx0gnjmJAnHnTVXNQG3vfvWNuiZIkwu9KrKdA1iJKfsfTVxE6NA==",
++      "license": "BSD-3-Clause"
++    },
++    "node_modules/call-bind-apply-helpers": {
++      "version": "1.0.2",
++      "resolved": "https://registry.npmjs.org/call-bind-apply-helpers/-/call-bind-apply-helpers-1.0.2.tgz",
++      "integrity": "sha512-Sp1ablJ0ivDkSzjcaJdxEunN5/XvksFJ2sMBFfq6x0ryhQV/2b/KwFe21cMpmHtPOSij8K99/wSfoEuTObmuMQ==",
++      "license": "MIT",
++      "dependencies": {
++        "es-errors": "^1.3.0",
++        "function-bind": "^1.1.2"
++      },
++      "engines": {
++        "node": ">= 0.4"
++      }
++    },
++    "node_modules/call-bound": {
++      "version": "1.0.4",
++      "resolved": "https://registry.npmjs.org/call-bound/-/call-bound-1.0.4.tgz",
++      "integrity": "sha512-+ys997U96po4Kx/ABpBCqhA9EuxJaQWDQg7295H4hBphv3IZg0boBKuwYpt4YXp6MZ5AmZQnU/tyMTlRpaSejg==",
++      "license": "MIT",
++      "dependencies": {
++        "call-bind-apply-helpers": "^1.0.2",
++        "get-intrinsic": "^1.3.0"
++      },
++      "engines": {
++        "node": ">= 0.4"
++      },
++      "funding": {
++        "url": "https://github.com/sponsors/ljharb"
++      }
++    },
++    "node_modules/debug": {
++      "version": "4.4.3",
++      "resolved": "https://registry.npmjs.org/debug/-/debug-4.4.3.tgz",
++      "integrity": "sha512-RGwwWnwQvkVfavKVt22FGLw+xYSdzARwm0ru6DhTVA3umU5hZc28V3kO4stgYryrTlLpuvgI9GiijltAjNbcqA==",
++      "license": "MIT",
++      "dependencies": {
++        "ms": "^2.1.3"
++      },
++      "engines": {
++        "node": ">=6.0"
++      },
++      "peerDependenciesMeta": {
++        "supports-color": {
++          "optional": true
++        }
++      }
++    },
++    "node_modules/dunder-proto": {
++      "version": "1.0.1",
++      "resolved": "https://registry.npmjs.org/dunder-proto/-/dunder-proto-1.0.1.tgz",
++      "integrity": "sha512-KIN/nDJBQRcXw0MLVhZE9iQHmG68qAVIBg9CqmUYjmQIhgij9U5MFvrqkUL5FbtyyzZuOeOt0zdeRe4UY7ct+A==",
++      "license": "MIT",
++      "dependencies": {
++        "call-bind-apply-helpers": "^1.0.1",
++        "es-errors": "^1.3.0",
++        "gopd": "^1.2.0"
++      },
++      "engines": {
++        "node": ">= 0.4"
++      }
++    },
++    "node_modules/ecdsa-sig-formatter": {
++      "version": "1.0.11",
++      "resolved": "https://registry.npmjs.org/ecdsa-sig-formatter/-/ecdsa-sig-formatter-1.0.11.tgz",
++      "integrity": "sha512-nagl3RYrbNv6kQkeJIpt6NJZy8twLB/2vtz6yN9Z4vRKHN4/QZJIEbqohALSgwKdnksuY3k5Addp5lg8sVoVcQ==",
++      "license": "Apache-2.0",
++      "dependencies": {
++        "safe-buffer": "^5.0.1"
++      }
++    },
++    "node_modules/es-define-property": {
++      "version": "1.0.1",
++      "resolved": "https://registry.npmjs.org/es-define-property/-/es-define-property-1.0.1.tgz",
++      "integrity": "sha512-e3nRfgfUZ4rNGL232gUgX06QNyyez04KdjFrF+LTRoOXmrOgFKDg4BCdsjW8EnT69eqdYGmRpJwiPVYNrCaW3g==",
++      "license": "MIT",
++      "engines": {
++        "node": ">= 0.4"
++      }
++    },
++    "node_modules/es-errors": {
++      "version": "1.3.0",
++      "resolved": "https://registry.npmjs.org/es-errors/-/es-errors-1.3.0.tgz",
++      "integrity": "sha512-Zf5H2Kxt2xjTvbJvP2ZWLEICxA6j+hAmMzIlypy4xcBg1vKVnx89Wy0GbS+kf5cwCVFFzdCFh2XSCFNULS6csw==",
++      "license": "MIT",
++      "engines": {
++        "node": ">= 0.4"
++      }
++    },
++    "node_modules/es-object-atoms": {
++      "version": "1.1.2",
++      "resolved": "https://registry.npmjs.org/es-object-atoms/-/es-object-atoms-1.1.2.tgz",
++      "integrity": "sha512-HWcBoN6NileqtSydK2FqHbS/LoDd2pqrnQHLyJzBj4kOp/ky2MWMN694xOfkK8/SnUsW2DH7EfyVlydKCsm1Zw==",
++      "license": "MIT",
++      "dependencies": {
++        "es-errors": "^1.3.0"
++      },
++      "engines": {
++        "node": ">= 0.4"
++      }
++    },
++    "node_modules/extend": {
++      "version": "3.0.2",
++      "resolved": "https://registry.npmjs.org/extend/-/extend-3.0.2.tgz",
++      "integrity": "sha512-fjquC59cD7CyW6urNXK0FBufkZcoiGG80wTuPujX590cB5Ttln20E2UB4S/WARVqhXffZl2LNgS+gQdPIIim/g==",
++      "license": "MIT"
++    },
++    "node_modules/function-bind": {
++      "version": "1.1.2",
++      "resolved": "https://registry.npmjs.org/function-bind/-/function-bind-1.1.2.tgz",
++      "integrity": "sha512-7XHNxH7qX9xG5mIwxkhumTox/MIRNcOgDrxWsMt2pAr23WHp6MrRlN7FBSFpCpr+oVO0F744iUgR82nJMfG2SA==",
++      "license": "MIT",
++      "funding": {
++        "url": "https://github.com/sponsors/ljharb"
++      }
++    },
++    "node_modules/gaxios": {
++      "version": "6.7.1",
++      "resolved": "https://registry.npmjs.org/gaxios/-/gaxios-6.7.1.tgz",
++      "integrity": "sha512-LDODD4TMYx7XXdpwxAVRAIAuB0bzv0s+ywFonY46k126qzQHT9ygyoa9tncmOiQmmDrik65UYsEkv3lbfqQ3yQ==",
++      "license": "Apache-2.0",
++      "dependencies": {
++        "extend": "^3.0.2",
++        "https-proxy-agent": "^7.0.1",
++        "is-stream": "^2.0.0",
++        "node-fetch": "^2.6.9",
++        "uuid": "^9.0.1"
++      },
++      "engines": {
++        "node": ">=14"
++      }
++    },
++    "node_modules/gcp-metadata": {
++      "version": "6.1.1",
++      "resolved": "https://registry.npmjs.org/gcp-metadata/-/gcp-metadata-6.1.1.tgz",
++      "integrity": "sha512-a4tiq7E0/5fTjxPAaH4jpjkSv/uCaU2p5KC6HVGrvl0cDjA8iBZv4vv1gyzlmK0ZUKqwpOyQMKzZQe3lTit77A==",
++      "license": "Apache-2.0",
++      "dependencies": {
++        "gaxios": "^6.1.1",
++        "google-logging-utils": "^0.0.2",
++        "json-bigint": "^1.0.0"
++      },
++      "engines": {
++        "node": ">=14"
++      }
++    },
++    "node_modules/get-intrinsic": {
++      "version": "1.3.0",
++      "resolved": "https://registry.npmjs.org/get-intrinsic/-/get-intrinsic-1.3.0.tgz",
++      "integrity": "sha512-9fSjSaos/fRIVIp+xSJlE6lfwhES7LNtKaCBIamHsjr2na1BiABJPo0mOjjz8GJDURarmCPGqaiVg5mfjb98CQ==",
++      "license": "MIT",
++      "dependencies": {
++        "call-bind-apply-helpers": "^1.0.2",
++        "es-define-property": "^1.0.1",
++        "es-errors": "^1.3.0",
++        "es-object-atoms": "^1.1.1",
++        "function-bind": "^1.1.2",
++        "get-proto": "^1.0.1",
++        "gopd": "^1.2.0",
++        "has-symbols": "^1.1.0",
++        "hasown": "^2.0.2",
++        "math-intrinsics": "^1.1.0"
++      },
++      "engines": {
++        "node": ">= 0.4"
++      },
++      "funding": {
++        "url": "https://github.com/sponsors/ljharb"
++      }
++    },
++    "node_modules/get-proto": {
++      "version": "1.0.1",
++      "resolved": "https://registry.npmjs.org/get-proto/-/get-proto-1.0.1.tgz",
++      "integrity": "sha512-sTSfBjoXBp89JvIKIefqw7U2CCebsc74kiY6awiGogKtoSGbgjYE/G/+l9sF3MWFPNc9IcoOC4ODfKHfxFmp0g==",
++      "license": "MIT",
++      "dependencies": {
++        "dunder-proto": "^1.0.1",
++        "es-object-atoms": "^1.0.0"
++      },
++      "engines": {
++        "node": ">= 0.4"
++      }
++    },
++    "node_modules/google-auth-library": {
++      "version": "9.15.1",
++      "resolved": "https://registry.npmjs.org/google-auth-library/-/google-auth-library-9.15.1.tgz",
++      "integrity": "sha512-Jb6Z0+nvECVz+2lzSMt9u98UsoakXxA2HGHMCxh+so3n90XgYWkq5dur19JAJV7ONiJY22yBTyJB1TSkvPq9Ng==",
++      "license": "Apache-2.0",
++      "dependencies": {
++        "base64-js": "^1.3.0",
++        "ecdsa-sig-formatter": "^1.0.11",
++        "gaxios": "^6.1.1",
++        "gcp-metadata": "^6.1.0",
++        "gtoken": "^7.0.0",
++        "jws": "^4.0.0"
++      },
++      "engines": {
++        "node": ">=14"
++      }
++    },
++    "node_modules/google-logging-utils": {
++      "version": "0.0.2",
++      "resolved": "https://registry.npmjs.org/google-logging-utils/-/google-logging-utils-0.0.2.tgz",
++      "integrity": "sha512-NEgUnEcBiP5HrPzufUkBzJOD/Sxsco3rLNo1F1TNf7ieU8ryUzBhqba8r756CjLX7rn3fHl6iLEwPYuqpoKgQQ==",
++      "license": "Apache-2.0",
++      "engines": {
++        "node": ">=14"
++      }
++    },
++    "node_modules/googleapis": {
++      "version": "144.0.0",
++      "resolved": "https://registry.npmjs.org/googleapis/-/googleapis-144.0.0.tgz",
++      "integrity": "sha512-ELcWOXtJxjPX4vsKMh+7V+jZvgPwYMlEhQFiu2sa9Qmt5veX8nwXPksOWGGN6Zk4xCiLygUyaz7xGtcMO+Onxw==",
++      "license": "Apache-2.0",
++      "dependencies": {
++        "google-auth-library": "^9.0.0",
++        "googleapis-common": "^7.0.0"
++      },
++      "engines": {
++        "node": ">=14.0.0"
++      }
++    },
++    "node_modules/googleapis-common": {
++      "version": "7.2.0",
++      "resolved": "https://registry.npmjs.org/googleapis-common/-/googleapis-common-7.2.0.tgz",
++      "integrity": "sha512-/fhDZEJZvOV3X5jmD+fKxMqma5q2Q9nZNSF3kn1F18tpxmA86BcTxAGBQdM0N89Z3bEaIs+HVznSmFJEAmMTjA==",
++      "license": "Apache-2.0",
++      "dependencies": {
++        "extend": "^3.0.2",
++        "gaxios": "^6.0.3",
++        "google-auth-library": "^9.7.0",
++        "qs": "^6.7.0",
++        "url-template": "^2.0.8",
++        "uuid": "^9.0.0"
++      },
++      "engines": {
++        "node": ">=14.0.0"
++      }
++    },
++    "node_modules/gopd": {
++      "version": "1.2.0",
++      "resolved": "https://registry.npmjs.org/gopd/-/gopd-1.2.0.tgz",
++      "integrity": "sha512-ZUKRh6/kUFoAiTAtTYPZJ3hw9wNxx+BIBOijnlG9PnrJsCcSjs1wyyD6vJpaYtgnzDrKYRSqf3OO6Rfa93xsRg==",
++      "license": "MIT",
++      "engines": {
++        "node": ">= 0.4"
++      },
++      "funding": {
++        "url": "https://github.com/sponsors/ljharb"
++      }
++    },
++    "node_modules/gtoken": {
++      "version": "7.1.0",
++      "resolved": "https://registry.npmjs.org/gtoken/-/gtoken-7.1.0.tgz",
++      "integrity": "sha512-pCcEwRi+TKpMlxAQObHDQ56KawURgyAf6jtIY046fJ5tIv3zDe/LEIubckAO8fj6JnAxLdmWkUfNyulQ2iKdEw==",
++      "license": "MIT",
++      "dependencies": {
++        "gaxios": "^6.0.0",
++        "jws": "^4.0.0"
++      },
++      "engines": {
++        "node": ">=14.0.0"
++      }
++    },
++    "node_modules/has-symbols": {
++      "version": "1.1.0",
++      "resolved": "https://registry.npmjs.org/has-symbols/-/has-symbols-1.1.0.tgz",
++      "integrity": "sha512-1cDNdwJ2Jaohmb3sg4OmKaMBwuC48sYni5HUw2DvsC8LjGTLK9h+eb1X6RyuOHe4hT0ULCW68iomhjUoKUqlPQ==",
++      "license": "MIT",
++      "engines": {
++        "node": ">= 0.4"
++      },
++      "funding": {
++        "url": "https://github.com/sponsors/ljharb"
++      }
++    },
++    "node_modules/hasown": {
++      "version": "2.0.4",
++      "resolved": "https://registry.npmjs.org/hasown/-/hasown-2.0.4.tgz",
++      "integrity": "sha512-T2UbfbBEF32wiepXIsMlTW9+dDYC6wMh/t/vYA4tuOMKqWz/n3vr1NFSxQiyP+zk2mXsoMA/i/7qV6LKut1t1A==",
++      "license": "MIT",
++      "dependencies": {
++        "function-bind": "^1.1.2"
++      },
++      "engines": {
++        "node": ">= 0.4"
++      }
++    },
++    "node_modules/https-proxy-agent": {
++      "version": "7.0.6",
++      "resolved": "https://registry.npmjs.org/https-proxy-agent/-/https-proxy-agent-7.0.6.tgz",
++      "integrity": "sha512-vK9P5/iUfdl95AI+JVyUuIcVtd4ofvtrOr3HNtM2yxC9bnMbEdp3x01OhQNnjb8IJYi38VlTE3mBXwcfvywuSw==",
++      "license": "MIT",
++      "dependencies": {
++        "agent-base": "^7.1.2",
++        "debug": "4"
++      },
++      "engines": {
++        "node": ">= 14"
++      }
++    },
++    "node_modules/is-stream": {
++      "version": "2.0.1",
++      "resolved": "https://registry.npmjs.org/is-stream/-/is-stream-2.0.1.tgz",
++      "integrity": "sha512-hFoiJiTl63nn+kstHGBtewWSKnQLpyb155KHheA1l39uvtO9nWIop1p3udqPcUd/xbF1VLMO4n7OI6p7RbngDg==",
++      "license": "MIT",
++      "engines": {
++        "node": ">=8"
++      },
++      "funding": {
++        "url": "https://github.com/sponsors/sindresorhus"
++      }
++    },
++    "node_modules/json-bigint": {
++      "version": "1.0.0",
++      "resolved": "https://registry.npmjs.org/json-bigint/-/json-bigint-1.0.0.tgz",
++      "integrity": "sha512-SiPv/8VpZuWbvLSMtTDU8hEfrZWg/mH/nV/b4o0CYbSxu1UIQPLdwKOCIyLQX+VIPO5vrLX3i8qtqFyhdPSUSQ==",
++      "license": "MIT",
++      "dependencies": {
++        "bignumber.js": "^9.0.0"
++      }
++    },
++    "node_modules/jwa": {
++      "version": "2.0.1",
++      "resolved": "https://registry.npmjs.org/jwa/-/jwa-2.0.1.tgz",
++      "integrity": "sha512-hRF04fqJIP8Abbkq5NKGN0Bbr3JxlQ+qhZufXVr0DvujKy93ZCbXZMHDL4EOtodSbCWxOqR8MS1tXA5hwqCXDg==",
++      "license": "MIT",
++      "dependencies": {
++        "buffer-equal-constant-time": "^1.0.1",
++        "ecdsa-sig-formatter": "1.0.11",
++        "safe-buffer": "^5.0.1"
++      }
++    },
++    "node_modules/jws": {
++      "version": "4.0.1",
++      "resolved": "https://registry.npmjs.org/jws/-/jws-4.0.1.tgz",
++      "integrity": "sha512-EKI/M/yqPncGUUh44xz0PxSidXFr/+r0pA70+gIYhjv+et7yxM+s29Y+VGDkovRofQem0fs7Uvf4+YmAdyRduA==",
++      "license": "MIT",
++      "dependencies": {
++        "jwa": "^2.0.1",
++        "safe-buffer": "^5.0.1"
++      }
++    },
++    "node_modules/math-intrinsics": {
++      "version": "1.1.0",
++      "resolved": "https://registry.npmjs.org/math-intrinsics/-/math-intrinsics-1.1.0.tgz",
++      "integrity": "sha512-/IXtbwEk5HTPyEwyKX6hGkYXxM9nbj64B+ilVJnC/R6B0pH5G4V3b0pVbL7DBj4tkhBAppbQUlf6F6Xl9LHu1g==",
++      "license": "MIT",
++      "engines": {
++        "node": ">= 0.4"
++      }
++    },
++    "node_modules/ms": {
++      "version": "2.1.3",
++      "resolved": "https://registry.npmjs.org/ms/-/ms-2.1.3.tgz",
++      "integrity": "sha512-6FlzubTLZG3J2a/NVCAleEhjzq5oxgHyaCU9yYXvcLsvoVaHJq/s5xXI6/XXP6tz7R9xAOtHnSO/tXtF3WRTlA==",
++      "license": "MIT"
++    },
++    "node_modules/node-fetch": {
++      "version": "2.7.0",
++      "resolved": "https://registry.npmjs.org/node-fetch/-/node-fetch-2.7.0.tgz",
++      "integrity": "sha512-c4FRfUm/dbcWZ7U+1Wq0AwCyFL+3nt2bEw05wfxSz+DWpWsitgmSgYmy2dQdWyKC1694ELPqMs/YzUSNozLt8A==",
++      "license": "MIT",
++      "dependencies": {
++        "whatwg-url": "^5.0.0"
++      },
++      "engines": {
++        "node": "4.x || >=6.0.0"
++      },
++      "peerDependencies": {
++        "encoding": "^0.1.0"
++      },
++      "peerDependenciesMeta": {
++        "encoding": {
++          "optional": true
++        }
++      }
++    },
++    "node_modules/nodemailer": {
++      "version": "6.10.1",
++      "resolved": "https://registry.npmjs.org/nodemailer/-/nodemailer-6.10.1.tgz",
++      "integrity": "sha512-Z+iLaBGVaSjbIzQ4pX6XV41HrooLsQ10ZWPUehGmuantvzWoDVBnmsdUcOIDM1t+yPor5pDhVlDESgOMEGxhHA==",
++      "license": "MIT-0",
++      "engines": {
++        "node": ">=6.0.0"
++      }
++    },
++    "node_modules/object-inspect": {
++      "version": "1.13.4",
++      "resolved": "https://registry.npmjs.org/object-inspect/-/object-inspect-1.13.4.tgz",
++      "integrity": "sha512-W67iLl4J2EXEGTbfeHCffrjDfitvLANg0UlX3wFUUSTx92KXRFegMHUVgSqE+wvhAbi4WqjGg9czysTV2Epbew==",
++      "license": "MIT",
++      "engines": {
++        "node": ">= 0.4"
++      },
++      "funding": {
++        "url": "https://github.com/sponsors/ljharb"
++      }
++    },
++    "node_modules/qs": {
++      "version": "6.17.1",
++      "resolved": "https://registry.npmjs.org/qs/-/qs-6.17.1.tgz",
++      "integrity": "sha512-jd3COkaKVgGUW+ZHyEHCG9bH7RoaaiWuMgzsIBjUMVjLAaWGWpoUAVwljVvBHxRu/2qEHnadLGZrkutYUBPQJA==",
++      "license": "BSD-3-Clause",
++      "dependencies": {
++        "es-define-property": "^1.0.1",
++        "side-channel": "^1.1.1"
++      },
++      "engines": {
++        "node": ">=0.6"
++      },
++      "funding": {
++        "url": "https://github.com/sponsors/ljharb"
++      }
++    },
++    "node_modules/safe-buffer": {
++      "version": "5.2.1",
++      "resolved": "https://registry.npmjs.org/safe-buffer/-/safe-buffer-5.2.1.tgz",
++      "integrity": "sha512-rp3So07KcdmmKbGvgaNxQSJr7bGVSVk5S9Eq1F+ppbRo70+YeaDxkw5Dd8NPN+GD6bjnYm2VuPuCXmpuYvmCXQ==",
++      "funding": [
++        {
++          "type": "github",
++          "url": "https://github.com/sponsors/feross"
++        },
++        {
++          "type": "patreon",
++          "url": "https://www.patreon.com/feross"
++        },
++        {
++          "type": "consulting",
++          "url": "https://feross.org/support"
++        }
++      ],
++      "license": "MIT"
++    },
++    "node_modules/side-channel": {
++      "version": "1.1.1",
++      "resolved": "https://registry.npmjs.org/side-channel/-/side-channel-1.1.1.tgz",
++      "integrity": "sha512-6x6dK6zJdpTzF4sQeNYxwtvBzf6Eg4GtlesS94HOvTudUeyK2WXAaIfmDgsyslYrRBeFIlsi54AYsFGUuhmvrQ==",
++      "license": "MIT",
++      "dependencies": {
++        "es-errors": "^1.3.0",
++        "object-inspect": "^1.13.4",
++        "side-channel-list": "^1.0.1",
++        "side-channel-map": "^1.0.1",
++        "side-channel-weakmap": "^1.0.2"
++      },
++      "engines": {
++        "node": ">= 0.4"
++      },
++      "funding": {
++        "url": "https://github.com/sponsors/ljharb"
++      }
++    },
++    "node_modules/side-channel-list": {
++      "version": "1.0.1",
++      "resolved": "https://registry.npmjs.org/side-channel-list/-/side-channel-list-1.0.1.tgz",
++      "integrity": "sha512-mjn/0bi/oUURjc5Xl7IaWi/OJJJumuoJFQJfDDyO46+hBWsfaVM65TBHq2eoZBhzl9EchxOijpkbRC8SVBQU0w==",
++      "license": "MIT",
++      "dependencies": {
++        "es-errors": "^1.3.0",
++        "object-inspect": "^1.13.4"
++      },
++      "engines": {
++        "node": ">= 0.4"
++      },
++      "funding": {
++        "url": "https://github.com/sponsors/ljharb"
++      }
++    },
++    "node_modules/side-channel-map": {
++      "version": "1.0.1",
++      "resolved": "https://registry.npmjs.org/side-channel-map/-/side-channel-map-1.0.1.tgz",
++      "integrity": "sha512-VCjCNfgMsby3tTdo02nbjtM/ewra6jPHmpThenkTYh8pG9ucZ/1P8So4u4FGBek/BjpOVsDCMoLA/iuBKIFXRA==",
++      "license": "MIT",
++      "dependencies": {
++        "call-bound": "^1.0.2",
++        "es-errors": "^1.3.0",
++        "get-intrinsic": "^1.2.5",
++        "object-inspect": "^1.13.3"
++      },
++      "engines": {
++        "node": ">= 0.4"
++      },
++      "funding": {
++        "url": "https://github.com/sponsors/ljharb"
++      }
++    },
++    "node_modules/side-channel-weakmap": {
++      "version": "1.0.2",
++      "resolved": "https://registry.npmjs.org/side-channel-weakmap/-/side-channel-weakmap-1.0.2.tgz",
++      "integrity": "sha512-WPS/HvHQTYnHisLo9McqBHOJk2FkHO/tlpvldyrnem4aeQp4hai3gythswg6p01oSoTl58rcpiFAjF2br2Ak2A==",
++      "license": "MIT",
++      "dependencies": {
++        "call-bound": "^1.0.2",
++        "es-errors": "^1.3.0",
++        "get-intrinsic": "^1.2.5",
++        "object-inspect": "^1.13.3",
++        "side-channel-map": "^1.0.1"
++      },
++      "engines": {
++        "node": ">= 0.4"
++      },
++      "funding": {
++        "url": "https://github.com/sponsors/ljharb"
++      }
++    },
++    "node_modules/tr46": {
++      "version": "0.0.3",
++      "resolved": "https://registry.npmjs.org/tr46/-/tr46-0.0.3.tgz",
++      "integrity": "sha512-N3WMsuqV66lT30CrXNbEjx4GEwlow3v6rr4mCcv6prnfwhS01rkgyFdjPNBYd9br7LpXV1+Emh01fHnq2Gdgrw==",
++      "license": "MIT"
++    },
++    "node_modules/url-template": {
++      "version": "2.0.8",
++      "resolved": "https://registry.npmjs.org/url-template/-/url-template-2.0.8.tgz",
++      "integrity": "sha512-XdVKMF4SJ0nP/O7XIPB0JwAEuT9lDIYnNsK8yGVe43y0AWoKeJNdv3ZNWh7ksJ6KqQFjOO6ox/VEitLnaVNufw==",
++      "license": "BSD"
++    },
++    "node_modules/uuid": {
++      "version": "9.0.1",
++      "resolved": "https://registry.npmjs.org/uuid/-/uuid-9.0.1.tgz",
++      "integrity": "sha512-b+1eJOlsR9K8HJpow9Ok3fiWOWSIcIzXodvv0rQjVoOVNpWMpxf1wZNpt4y9h10odCNrqnYp1OBzRktckBe3sA==",
++      "deprecated": "uuid@10 and below is no longer supported.  For ESM codebases, update to uuid@latest.  For CommonJS codebases, use uuid@11 (but be aware this version will likely be deprecated in 2028).",
++      "funding": [
++        "https://github.com/sponsors/broofa",
++        "https://github.com/sponsors/ctavan"
++      ],
++      "license": "MIT",
++      "bin": {
++        "uuid": "dist/bin/uuid"
++      }
++    },
++    "node_modules/webidl-conversions": {
++      "version": "3.0.1",
++      "resolved": "https://registry.npmjs.org/webidl-conversions/-/webidl-conversions-3.0.1.tgz",
++      "integrity": "sha512-2JAn3z8AR6rjK8Sm8orRC0h/bcl/DqL7tRPdGZ4I1CjdF+EaMLmYxBHyXuKL849eucPFhvBoxMsflfOb8kxaeQ==",
++      "license": "BSD-2-Clause"
++    },
++    "node_modules/whatwg-url": {
++      "version": "5.0.0",
++      "resolved": "https://registry.npmjs.org/whatwg-url/-/whatwg-url-5.0.0.tgz",
++      "integrity": "sha512-saE57nupxk6v3HY35+jzBwYa0rKSy0XR8JSxZPwgLr7ys0IBzhGviA1/TUGJLmSVqs8pb9AnvICXEuOHLprYTw==",
++      "license": "MIT",
++      "dependencies": {
++        "tr46": "~0.0.3",
++        "webidl-conversions": "^3.0.0"
++      }
++    }
++  }
++}
+diff --git a/package.json b/package.json
+new file mode 100644
+index 0000000..7d1ef83
+--- /dev/null
++++ b/package.json
+@@ -0,0 +1,17 @@
++{
++  "name": "asg-daily-stats",
++  "version": "1.1.0",
++  "private": true,
++  "type": "module",
++  "description": "ASG daily stats (DRAPS) web app with publish and management email routes",
++  "scripts": {
++    "check": "node --check api/publish.js && node --check api/email.js && node --check lib/draps.js"
++  },
++  "engines": {
++    "node": ">=18"
++  },
++  "dependencies": {
++    "googleapis": "^144.0.0",
++    "nodemailer": "^6.9.16"
++  }
++}
