@@ -43,3 +43,7 @@ Reps are kept on a `Reps` tab in the same spreadsheet as `DRAPS Log`, with colum
 The page opens on a gate screen titled **Daily DRAPS Input**. The rep chooses their name (or adds it), then presses **Start** to open the tally. **Change rep** returns to the gate without clearing any figures. The date on the tally follows the chosen rep's timezone.
 
 To check the gate locally without the Google env vars, run `node test/e2e-server.mjs` and open `http://localhost:4173`. This server stubs `/api/reps`, `/api/publish` and `/api/email`. It is for testing only and is not deployed.
+
+## Staff portal
+
+`portal.html` is a static hub page with the same look as the daily gate. It lists internal apps so staff do not have to hunt for links. To add or change an app, edit the `APPS` array near the bottom of `portal.html` (each entry needs `name`, `description` and an `https://` or `/` `url`). The page has no API calls and no passcode; each linked app keeps its own sign-in. `test/portal.test.js` checks the list.

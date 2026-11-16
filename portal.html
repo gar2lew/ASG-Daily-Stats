@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Staff Portal - ASG</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#0a1f3d; --muted:#5f6a7a; --body:#3a4a63;
+    --gold:#b8924a; --gold-hi:#c9a45c; --gold-deep:#8a6a2f;
+    --card:#faf7f1; --border:#d6cfc1; --stone:#ece6d8;
+  }
+
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    min-height:100vh;
+    font-family:'IBM Plex Sans',sans-serif;
+    background:linear-gradient(180deg,#f6f2e8 0%,var(--stone) 100%);
+    color:var(--ink);
+  }
+  a:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
+
+  .portal{min-height:100vh;display:flex;flex-direction:column}
+  .portal-brand{
+    position:relative;overflow:hidden;
+    background:radial-gradient(120% 80% at 20% 10%,#0a1f3d 0%,#06152b 70%,#04101f 100%);
+    color:#fff;padding:36px 24px 40px;text-align:center;
+  }
+  .portal-brand > *:not(svg){position:relative;z-index:1}
+  .brand-art{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+  .lockup{display:flex;align-items:center;justify-content:center;gap:16px}
+  .logo{font:400 46px/1 Georgia,serif;letter-spacing:.02em;color:var(--gold-hi)}
+  .rule{width:1px;height:42px;background:linear-gradient(var(--gold-hi),transparent)}
+  .words{display:flex;flex-direction:column;gap:4px;font:500 12px 'IBM Plex Sans',sans-serif;letter-spacing:.28em;text-align:left}
+  .divider{height:1px;margin:28px auto 0;max-width:320px;background:linear-gradient(90deg,transparent,var(--gold-hi) 30%,var(--gold-hi) 70%,transparent)}
+  .portal-brand h1{margin:28px 0 0;font:500 40px/1.15 Georgia,serif;color:#fff}
+  .tagline{margin:12px 0 0;font:italic 19px Georgia,serif;color:var(--gold-hi)}
+  .lede{margin:14px auto 0;max-width:36ch;color:rgba(255,255,255,.78);font-size:15px;line-height:1.6}
+
+  .portal-panel{flex:1;display:flex;flex-direction:column;align-items:center;gap:16px;padding:28px 16px 40px}
+  .heading{width:100%;max-width:720px;text-align:center}
+  .eyebrow{display:block;color:var(--gold-deep);font:600 13px 'IBM Plex Sans',sans-serif;letter-spacing:.32em;text-transform:uppercase}
+  .h2{margin:12px 0 0;font:600 34px/1.1 Georgia,serif;color:var(--ink)}
+  .copy{margin:14px 0 0;color:var(--body);font-size:14.5px;line-height:1.6}
+
+  .apps{
+    list-style:none;width:100%;max-width:720px;
+    display:grid;grid-template-columns:1fr;gap:12px;margin-top:8px;
+  }
+  .app-link{
+    display:flex;align-items:center;gap:16px;
+    padding:18px 20px;min-height:44px;
+    background:var(--card);border:1px solid var(--border);border-radius:14px;
+    box-shadow:0 14px 34px -22px rgba(10,31,61,.45);
+    color:inherit;text-decoration:none;
+    transition:border-color .15s,transform .15s;
+  }
+  .app-link:hover{border-color:var(--gold);transform:translateY(-1px)}
+  .app-icon{
+    flex:0 0 44px;height:44px;border-radius:12px;
+    display:flex;align-items:center;justify-content:center;
+    background:linear-gradient(135deg,#0a1f3d,#16324f);color:var(--gold-hi);
+  }
+  .app-text{flex:1;min-width:0}
+  .app-name{display:block;font:600 16px/1.3 'IBM Plex Sans',sans-serif;color:var(--ink)}
+  .app-desc{display:block;margin-top:2px;font-size:13.5px;line-height:1.5;color:var(--muted)}
+  .app-arrow{flex:0 0 auto;color:var(--gold-deep)}
+
+  .empty{width:100%;max-width:720px;color:var(--muted);text-align:center;font-size:14px}
+  .foot{margin-top:8px;color:var(--muted);font-size:12.5px;text-align:center}
+
+  @media (min-width:900px){
+    .portal{flex-direction:row;align-items:stretch}
+    .portal-brand{flex:0 0 40%;display:flex;flex-direction:column;justify-content:center;padding:56px}
+    .portal-brand h1{font-size:44px}
+    .lockup{justify-content:flex-start}
+    .divider{margin-left:0}
+    .lede{margin-left:0}
+    .portal-panel{flex:1;padding:56px;justify-content:center}
+    .h2{font-size:40px}
+  }
+  @media (min-width:1100px){
+    .apps{grid-template-columns:1fr 1fr}
+  }
+</style>
+</head>
+<body>
+
+<div class="portal">
+  <header class="portal-brand">
+    <svg class="brand-art" viewBox="0 0 400 600" preserveAspectRatio="none" fill="none" aria-hidden="true">
+      <g stroke="rgba(201,164,92,0.10)" stroke-width="1">
+        <path d="M-50 120 C 120 80, 280 160, 460 100"/><path d="M-50 170 C 120 130, 280 210, 460 150"/><path d="M-50 220 C 120 180, 280 260, 460 200"/>
+      </g>
+      <g stroke="rgba(255,255,255,0.05)" stroke-width="1">
+        <path d="M-50 420 C 140 380, 260 470, 460 410"/><path d="M-50 470 C 140 430, 260 520, 460 460"/><path d="M-50 520 C 140 480, 260 570, 460 510"/>
+      </g>
+    </svg>
+    <div class="lockup"><span class="logo">ASG</span><span class="rule"></span><span class="words"><span>AMPLIFY</span><span>SOLUTIONS</span><span>GROUP</span></span></div>
+    <div class="divider"></div>
+    <h1>Staff Portal</h1>
+    <p class="tagline">One place for every internal system.</p>
+    <p class="lede">Pick the tool you need. Each opens in its own page, with its own sign-in where it has one.</p>
+  </header>
+
+  <main class="portal-panel">
+    <div class="heading">
+      <span class="eyebrow">Internal Apps</span>
+      <h2 class="h2">Where do you want to go?</h2>
+      <p class="copy">Select an app to open it. Bookmark this page so you never have to hunt for a link again.</p>
+    </div>
+
+    <!-- To add an app, add one object to APPS below. Keep url as a full https link. -->
+    <ul class="apps" id="appList" aria-label="Internal apps"></ul>
+    <p id="emptyState" class="empty" hidden>No apps are listed yet.</p>
+
+    <p class="foot">ASG internal use only.</p>
+  </main>
+</div>
+
+<script>
+  // Single source of truth for the hub. Edit this list to add or change apps.
+  const APPS = [
+    {
+      name: 'Daily DRAPS Input',
+      description: 'Enter today\'s figures and publish them to the weekly report.',
+      url: '/'
+    },
+    {
+      name: 'DRAPS Daily Sheet',
+      description: 'The live spreadsheet holding the rep list, daily log and weekly report.',
+      url: 'https://docs.google.com/spreadsheets/d/157IwTtLV93_dNhqUPu4ZGTvw3WhbnvbL9PsjuBMh28M/edit'
+    },
+    {
+      name: 'Sales Checklist',
+      description: 'The sales checklist app.',
+      url: 'https://saleschecklistia.vercel.app/'
+    }
+  ];
+
+  const ICON = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4h16v16H4z"/><path d="M4 9h16"/></svg>';
+  const ARROW = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17L17 7M9 7h8v8"/></svg>';
+
+  function isSafeUrl(value) {
+    try {
+      const u = new URL(value, window.location.origin);
+      return u.protocol === 'https:' || u.protocol === 'http:' || u.origin === window.location.origin;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  function renderApps(list) {
+    const ul = document.getElementById('appList');
+    const empty = document.getElementById('emptyState');
+    const apps = list.filter(app => app && app.name && app.url && isSafeUrl(app.url));
+    if (apps.length === 0) {
+      empty.hidden = false;
+      return;
+    }
+    for (const app of apps) {
+      const li = document.createElement('li');
+      const a = document.createElement('a');
+      a.className = 'app-link';
+      a.href = app.url;
+      const icon = document.createElement('span');
+      icon.className = 'app-icon';
+      icon.innerHTML = ICON;
+      const text = document.createElement('span');
+      text.className = 'app-text';
+      const name = document.createElement('span');
+      name.className = 'app-name';
+      name.textContent = app.name;
+      const desc = document.createElement('span');
+      desc.className = 'app-desc';
+      desc.textContent = app.description || '';
+      text.append(name, desc);
+      const arrow = document.createElement('span');
+      arrow.className = 'app-arrow';
+      arrow.innerHTML = ARROW;
+      a.append(icon, text, arrow);
+      li.append(a);
+      ul.append(li);
+    }
+  }
+
+  renderApps(APPS);
+</script>
+</body>
+</html>
