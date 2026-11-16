@@ -534,29 +534,54 @@
     .num{width:72px}
     .stats{grid-template-columns:repeat(2,1fr)}
   }
-  /* Gate screen: shown until a rep starts. Colours from the Irrevoccable Authority reference. */
+  /* Gate screen: matches the Irrevoccable Authority landing reference (navy brand panel, ivory form panel, gold accents). */
   body[data-view="gate"] .topbar,
   body[data-view="gate"] main.app{display:none}
   body[data-view="tally"] #gate{display:none}
   .gate{
     min-height:100vh;
-    display:grid;
-    gap:24px;
-    align-content:center;
-    padding:24px 16px;
-    background:#ece6d8;
+    display:flex;
+    flex-direction:column;
+    background:linear-gradient(180deg,#f6f2e8 0%,#efe9dc 100%);
     color:#0a1f3d;
   }
-  .gate-brand{text-align:center}
-  .gate-kicker{margin:0 0 8px;color:#8a6a2f;font:600 11px 'IBM Plex Mono',monospace;letter-spacing:.2em;text-transform:uppercase}
-  .gate-brand h1{margin:0;font:700 34px 'Archivo',sans-serif;color:#0a1f3d}
-  .gate-lede{margin:10px auto 0;max-width:34ch;color:#5f6a7a;font-size:15px}
-  .gate-panel{display:grid;gap:16px;width:100%;max-width:460px;margin:0 auto}
-  .gate-start{width:100%;min-height:44px;font-size:16px}
-  @media (min-width:768px){
-    .gate{grid-template-columns:1fr 1fr;align-items:center}
-    .gate-brand{text-align:left}
+  .gate .gate-brand{
+    background:radial-gradient(120% 80% at 20% 10%,#0a1f3d 0%,#06152b 70%,#04101f 100%);
+    color:#fff;
+    padding:36px 24px 40px;
+    text-align:center;
+  }
+  .gate-lockup{display:flex;align-items:center;justify-content:center;gap:16px}
+  .gate-logo{font:400 46px/1 Georgia,serif;letter-spacing:.02em;color:#c9a45c}
+  .gate-rule{width:1px;height:42px;background:linear-gradient(#c9a45c,transparent)}
+  .gate-words{display:flex;flex-direction:column;gap:4px;font:500 12px 'IBM Plex Sans',sans-serif;letter-spacing:.28em;text-align:left}
+  .gate-divider{height:1px;margin:28px auto 0;max-width:320px;background:linear-gradient(90deg,transparent,#c9a45c 30%,#c9a45c 70%,transparent)}
+  .gate-brand h1{margin:28px 0 0;font:500 40px/1.15 Georgia,serif;color:#fff}
+  .gate-tagline{margin:12px 0 0;font:italic 19px Georgia,serif;color:#c9a45c}
+  .gate-lede{margin:14px auto 0;max-width:36ch;color:rgba(255,255,255,.78);font-size:15px;line-height:1.6}
+  .gate-panel{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:28px 20px 36px}
+  .gate-eyebrow{margin:0;color:#8a6a2f;font:600 13px 'IBM Plex Sans',sans-serif;letter-spacing:.32em;text-transform:uppercase}
+  .gate-panel .rep-card{width:100%;max-width:460px}
+  .gate-status{width:100%;max-width:460px;margin:0;color:#b00020;font-size:14px;text-align:center}
+  .gate .gate-start{
+    width:100%;max-width:460px;height:56px;border-radius:13px;
+    font:600 16px 'IBM Plex Sans',sans-serif;letter-spacing:.02em;cursor:pointer;
+    border:1px solid rgba(255,255,255,.25);
+    background:linear-gradient(135deg,#8a6a2f 0%,#d4af6a 50%,#a8843d 100%);
+    color:#0a1f3d;
+    box-shadow:0 14px 30px -10px rgba(138,106,47,.55),0 4px 10px -4px rgba(10,31,61,.2),inset 0 1px 0 rgba(255,255,255,.35);
+  }
+  .gate .gate-start:disabled{
+    background:#e7dfce;color:#9a9384;border:1px solid #dcd3bf;box-shadow:none;cursor:not-allowed;
+  }
+  @media (min-width:900px){
+    .gate{flex-direction:row;align-items:stretch}
+    .gate .gate-brand{flex:0 0 40%;display:flex;flex-direction:column;justify-content:center;padding:56px}
+    .gate-brand h1{font-size:44px}
+    .gate-lockup{justify-content:flex-start}
+    .gate-divider{margin-left:0}
     .gate-lede{margin-left:0}
+    .gate-panel{flex:1;padding:56px}
   }
 </style>
 </head>
@@ -564,11 +589,14 @@
 
 <section id="gate" class="gate" aria-labelledby="gateTitle">
   <div class="gate-brand">
-    <p class="gate-kicker">ASG · Daily Stats</p>
+    <div class="gate-lockup"><span class="gate-logo">ASG</span><span class="gate-rule"></span><span class="gate-words"><span>AMPLIFY</span><span>SOLUTIONS</span><span>GROUP</span></span></div>
+    <div class="gate-divider"></div>
     <h1 id="gateTitle">Daily DRAPS Input</h1>
-    <p class="gate-lede">Choose your name, then press Start to enter today's figures.</p>
+    <p class="gate-tagline">Enter today's figures. Publish. Report.</p>
+    <p class="gate-lede">Choose your name, then press Start to open today's tally.</p>
   </div>
   <div class="gate-panel">
+    <p class="gate-eyebrow">Rep sign-in</p>
     <section class="card rep-card" style="--d:.02s">
       <span class="rep-icon" aria-hidden="true">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#f5f1e8" stroke-width="2" stroke-linecap="round">
@@ -592,6 +620,7 @@
         </form>
       </div>
     </section>
+    <p id="gateStatus" class="gate-status" role="alert"></p>
     <button type="button" id="gateStartBtn" class="btn gold gate-start" disabled>Start</button>
   </div>
 </section>
@@ -1180,9 +1209,11 @@
       repList = result.reps;
       setRepOptions(readRepName());
       updateDateChip();
+      byId('gateStatus').textContent = '';
     } catch (error) {
       byId('repName').innerHTML = '<option value="">Could not load names</option>';
       setStatus(`Could not load rep names: ${error.message}`,'error');
+      byId('gateStatus').textContent = `Could not load rep names: ${error.message}`;
     }
     update();
   };
