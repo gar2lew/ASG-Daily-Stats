@@ -31,6 +31,16 @@ function deps(store) {
   };
 }
 
+test('POST with a null or missing body returns 400, not 500', async () => {
+  for (const body of [null, undefined]) {
+    const d = deps({ list: [] });
+    const res = mkRes();
+    await handleReps({ method: 'POST', headers: GOOD, body }, res, d.deps);
+    assert.equal(res.code, 400);
+    assert.equal(d.calls.addRep.length, 0);
+  }
+});
+
 test('missing passcode is rejected before the store is touched', async () => {
   const d = deps({ list: [] });
   const res = mkRes();
