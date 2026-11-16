@@ -37,3 +37,9 @@ Reps are kept on a `Reps` tab in the same spreadsheet as `DRAPS Log`, with colum
 ## Tests
 
     npm test
+
+## Gate screen
+
+The page opens on a gate screen titled **Daily DRAPS Input**. The rep chooses their name (or adds it), then presses **Start** to open the tally. **Change rep** returns to the gate without clearing any figures. The date on the tally follows the chosen rep's timezone.
+
+To check the gate locally without the Google env vars, run `node test/e2e-server.mjs` and open `http://localhost:4173`. This server stubs `/api/reps`, `/api/publish` and `/api/email`. It is for testing only and is not deployed.
