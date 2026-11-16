@@ -1136,13 +1136,13 @@
     }
   });
 
-  byId('dateChip').textContent =
-    new Intl.DateTimeFormat('en-AU',{
-      weekday:'long',
-      day:'2-digit',
-      month:'short',
-      year:'numeric'
-    }).format(new Date());
+  // Date chip shows the selected rep's date and weekday. Until a rep is chosen, Perth is used.
+  const MONTHS_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const updateDateChip = () => {
+    const today = repToday();
+    const [day, month, year] = today.date.split('/');
+    byId('dateChip').textContent = `${today.weekday}, ${Number(day)} ${MONTHS_SHORT[Number(month) - 1]} ${year}`;
+  };
 
   // Rep list: shared, from /api/reps. Only the chosen name is remembered on this device.
   const REP_KEY = 'drapsRepName';
@@ -1179,6 +1179,7 @@
       const result = await requestJson(API_REPS,'GET');
       repList = result.reps;
       setRepOptions(readRepName());
+      updateDateChip();
     } catch (error) {
       byId('repName').innerHTML = '<option value="">Could not load names</option>';
       setStatus(`Could not load rep names: ${error.message}`,'error');
@@ -1205,6 +1206,7 @@
       repList.sort((a,b) => a.name.localeCompare(b.name));
       setRepOptions(result.rep.name);
       saveRepName(result.rep.name);
+      updateDateChip();
       byId('repAddForm').reset();
       byId('repAddForm').hidden = true;
       status.textContent = '';
@@ -1217,11 +1219,13 @@
   byId('repName').addEventListener('change',() => {
     saveRepName(byId('repName').value);
     updateStartButton();
+    updateDateChip();
     update();
   });
 
   byId('gateStartBtn').addEventListener('click',() => {
     showView('tally');
+    updateDateChip();
     update();
   });
 
