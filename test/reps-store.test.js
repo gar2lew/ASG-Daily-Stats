@@ -66,3 +66,26 @@ test('addRep creates a missing Reps tab and writes the header first', async () =
   assert.deepEqual(sheets.calls.update[0].requestBody.values, [HEADER]);
   assert.equal(sheets.calls.append.length, 1);
 });
+
+test('timezone comes from State, not from a hand-edited Timezone cell', async () => {
+  const sheets = fakeSheets({
+    values: [HEADER, ['Sam', 'WA', '', 'TRUE', '16/11/2026'], ['Kim', 'QLD', 'Australia/Sydney', 'TRUE', '16/11/2026']],
+  });
+  const reps = await listReps(sheets, 'sheet-id');
+  assert.equal(reps.find(r => r.name === 'Sam').timezone, 'Australia/Perth');
+  assert.equal(reps.find(r => r.name === 'Kim').timezone, 'Australia/Brisbane');
+});
+
+test('rows with an invalid State are left out of the dropdown', async () => {
+  const sheets = fakeSheets({
+    values: [HEADER, ['Typo', 'Queensland', 'Australia/Brisbane', 'TRUE', ''], ['Sam', 'WA', '', 'TRUE', '']],
+  });
+  assert.deepEqual((await listReps(sheets, 'sheet-id')).map(r => r.name), ['Sam']);
+});
+
+test('names are appended with RAW so formulas and dates are stored as text', async () => {
+  const sheets = fakeSheets({ values: [HEADER] });
+  await addRep(sheets, 'sheet-id', { name: '=HYPERLINK("http://x","Joe")', state: 'QLD' }, '16/11/2026');
+  assert.equal(sheets.calls.append[0].valueInputOption, 'RAW');
+  assert.equal(sheets.calls.append[0].requestBody.values[0][0], '=HYPERLINK("http://x","Joe")');
+});
