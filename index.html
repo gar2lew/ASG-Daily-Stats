@@ -585,6 +585,9 @@
   .gate-line-l{background:linear-gradient(90deg,transparent,#b8924a)}
   .gate-line-r{background:linear-gradient(90deg,#b8924a,transparent)}
   .gate-copy{margin:18px 0 0;color:#3a4a63;font-size:14.5px;line-height:1.6}
+  .gate-retry{width:100%;max-width:460px;min-height:44px;border-radius:13px;cursor:pointer;background:transparent;border:1px solid #b8924a;color:#8a6a2f;font:600 15px 'IBM Plex Sans',sans-serif}
+  .gate-retry[hidden]{display:none}
+  .gate-retry:focus-visible{outline:2px solid #b8924a;outline-offset:3px}
   @media (min-width:900px){
     .gate-edge{display:block}
     .gate-h2{font-size:40px}
@@ -657,6 +660,7 @@
       </div>
     </section>
     <p id="gateStatus" class="gate-status" role="alert"></p>
+    <button type="button" id="gateRetryBtn" class="gate-retry" hidden>Try again</button>
     <button type="button" id="gateStartBtn" class="btn gold gate-start" disabled>Start</button>
   </div>
 </section>
@@ -1240,19 +1244,28 @@
   };
 
   const loadReps = async () => {
+    const retry = byId('gateRetryBtn');
     try {
       const result = await requestJson(API_REPS,'GET');
       repList = result.reps;
       setRepOptions(readRepName());
       updateDateChip();
       byId('gateStatus').textContent = '';
+      retry.hidden = true;
     } catch (error) {
       byId('repName').innerHTML = '<option value="">Could not load names</option>';
       setStatus(`Could not load rep names: ${error.message}`,'error');
       byId('gateStatus').textContent = `Could not load rep names: ${error.message}`;
+      retry.hidden = false;
     }
     update();
   };
+
+  byId('gateRetryBtn').addEventListener('click',() => {
+    byId('gateRetryBtn').hidden = true;
+    byId('gateStatus').textContent = 'Loading names…';
+    loadReps();
+  });
 
   byId('repAddBtn').addEventListener('click',() => {
     const form = byId('repAddForm');
