@@ -574,6 +574,21 @@
   .gate .gate-start:disabled{
     background:#e7dfce;color:#9a9384;border:1px solid #dcd3bf;box-shadow:none;cursor:not-allowed;
   }
+  .gate .gate-brand{position:relative;overflow:hidden}
+  .gate-brand > *:not(svg){position:relative;z-index:1}
+  .gate-art{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+  .gate-edge{display:none;position:absolute;top:0;right:0;width:130px;height:100%;pointer-events:none}
+  .gate-heading{width:100%;max-width:460px;text-align:center}
+  .gate-h2{margin:12px 0 0;font:600 36px/1.1 Georgia,serif;color:#0a1f3d}
+  .gate-ornament{display:flex;align-items:center;justify-content:center;gap:12px;margin-top:18px;color:#b8924a}
+  .gate-line{display:block;height:1px;width:90px}
+  .gate-line-l{background:linear-gradient(90deg,transparent,#b8924a)}
+  .gate-line-r{background:linear-gradient(90deg,#b8924a,transparent)}
+  .gate-copy{margin:18px 0 0;color:#3a4a63;font-size:14.5px;line-height:1.6}
+  @media (min-width:900px){
+    .gate-edge{display:block}
+    .gate-h2{font-size:40px}
+  }
   @media (min-width:900px){
     .gate{flex-direction:row;align-items:stretch}
     .gate .gate-brand{flex:0 0 40%;display:flex;flex-direction:column;justify-content:center;padding:56px}
@@ -589,14 +604,35 @@
 
 <section id="gate" class="gate" aria-labelledby="gateTitle">
   <div class="gate-brand">
+    <svg class="gate-art" viewBox="0 0 400 600" preserveAspectRatio="none" fill="none" aria-hidden="true">
+      <g stroke="rgba(201,164,92,0.10)" stroke-width="1">
+        <path d="M-50 120 C 120 80, 280 160, 460 100"/><path d="M-50 170 C 120 130, 280 210, 460 150"/><path d="M-50 220 C 120 180, 280 260, 460 200"/>
+      </g>
+      <g stroke="rgba(255,255,255,0.05)" stroke-width="1">
+        <path d="M-50 420 C 140 380, 260 470, 460 410"/><path d="M-50 470 C 140 430, 260 520, 460 460"/><path d="M-50 520 C 140 480, 260 570, 460 510"/>
+      </g>
+    </svg>
+    <svg class="gate-edge" viewBox="0 0 130 1000" preserveAspectRatio="none" aria-hidden="true">
+      <path d="M0,0 C 70,220 70,780 0,1000 L 0,1000 L 0,0 Z" fill="#06152b"/>
+      <path d="M0,0 C 70,220 70,780 0,1000" fill="none" stroke="#c9a45c" stroke-width="2"/>
+    </svg>
     <div class="gate-lockup"><span class="gate-logo">ASG</span><span class="gate-rule"></span><span class="gate-words"><span>AMPLIFY</span><span>SOLUTIONS</span><span>GROUP</span></span></div>
     <div class="gate-divider"></div>
     <h1 id="gateTitle">Daily DRAPS Input</h1>
     <p class="gate-tagline">Enter today's figures. Publish. Report.</p>
-    <p class="gate-lede">Choose your name, then press Start to open today's tally.</p>
+    <p class="gate-lede">Daily figures for every rep, published to the weekly report.</p>
   </div>
   <div class="gate-panel">
-    <p class="gate-eyebrow">Rep sign-in</p>
+    <div class="gate-heading">
+      <span class="gate-eyebrow">Daily Input</span>
+      <h2 class="gate-h2">Start Today's Tally</h2>
+      <div class="gate-ornament">
+        <span class="gate-line gate-line-l"></span>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+        <span class="gate-line gate-line-r"></span>
+      </div>
+      <p class="gate-copy">Select your name, then press Start to open today's tally.</p>
+    </div>
     <section class="card rep-card" style="--d:.02s">
       <span class="rep-icon" aria-hidden="true">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#f5f1e8" stroke-width="2" stroke-linecap="round">
