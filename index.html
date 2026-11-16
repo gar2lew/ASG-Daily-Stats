@@ -436,6 +436,56 @@
   .stat:nth-child(1) .v,.stat:nth-child(3) .v{color:var(--green)}
   .stat:nth-child(2) .v,.stat:nth-child(4) .v{color:var(--gold-deep)}
 
+  .btn.dark{
+    background:var(--navy);
+    color:#f5f1e8;
+    box-shadow:0 6px 18px -8px rgba(14,26,47,.7);
+  }
+
+  .btn.dark:hover{
+    background:var(--navy2);
+    transform:translateY(-2px);
+  }
+
+  .btn:disabled{
+    opacity:.55;
+    cursor:wait;
+    transform:none;
+  }
+
+  .action-bar{
+    margin-top:20px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:16px;
+    flex-wrap:wrap;
+    border-left:5px solid var(--navy2);
+  }
+
+  .action-title{
+    color:var(--navy2);
+    font-family:'Archivo',sans-serif;
+    font-weight:800;
+    font-size:16px;
+  }
+
+  .action-status{
+    margin-top:4px;
+    min-height:16px;
+    color:var(--muted);
+    font:400 12px 'IBM Plex Mono',monospace;
+  }
+
+  .action-status[data-tone="success"]{color:var(--green)}
+  .action-status[data-tone="error"]{color:#a23b2c}
+
+  .action-buttons{
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+  }
+
   @keyframes rise{
     from{opacity:0;transform:translateY(16px)}
     to{opacity:1;transform:translateY(0)}
@@ -651,6 +701,17 @@
       </div>
     </aside>
   </div>
+
+  <section class="card action-bar" style="--d:.3s">
+    <div>
+      <div class="action-title">End of Day</div>
+      <div class="action-status" id="actionStatus" role="status" aria-live="polite"></div>
+    </div>
+    <div class="action-buttons">
+      <button class="btn dark" id="publishBtn" type="button">Publish Results</button>
+      <button class="btn gold" id="emailBtn" type="button">Send to Management</button>
+    </div>
+  </section>
 </main>
 
 <script>
@@ -658,6 +719,10 @@
   'use strict';
 
   const STORAGE_KEY = 'asg-daily-stats-simple-v2';
+
+  // Serverless API routes live in /api (Vercel). Secrets and recipients are environment variables, never in this file.
+  const API_PUBLISH = '/api/publish';
+  const API_EMAIL = '/api/email';
 
   const fieldIds = [
     'repName',
@@ -849,6 +914,146 @@
 
     byId('fcNote').value = '';
     update();
+  });
+
+  // Today's date and weekday in Perth, regardless of the device's time zone.
+  const perthToday = () => {
+    const parts = new Intl.DateTimeFormat('en-AU',{
+      timeZone:'Australia/Perth',
+      weekday:'long',
+      day:'2-digit',
+      month:'2-digit',
+      year:'numeric'
+    }).formatToParts(new Date());
+    const part = type => parts.find(p => p.type === type).value;
+    return {
+      weekday: part('weekday'),
+      date: `${part('day')}/${part('month')}/${part('year')}`
+    };
+  };
+
+  const buildSubject = record => `DRAPS - ${record.rep} - ${record.day} - ${record.date}`;
+
+  const buildRecord = () => {
+    const today = perthToday();
+    const record = {
+      date: today.date,
+      day: today.weekday,
+      rep: byId('repName').value.trim()
+    };
+
+    ['D','R','A','P','S'].forEach(letter => {
+      const key = letter.toLowerCase();
+      record[`${key}Label`] = byId(`label${letter}`).value.trim().toUpperCase();
+      record[`${key}Value`] = numberValue(`value${letter}`);
+    });
+
+    ['leadCalls','firstConsultCalls','financeRunCalls','coffeeRunCalls',
+     'fcCalls','fcSpoke','fcBooked','recCalls','recSpoke','recBooked'].forEach(id => {
+      record[id] = numberValue(id);
+    });
+
+    record.fcNote = byId('fcNote').value.trim();
+    record.totalCalls = record.leadCalls + record.firstConsultCalls + record.financeRunCalls + record.coffeeRunCalls;
+    record.totalSpoke = record.fcSpoke + record.recSpoke;
+    record.totalBooked = record.fcBooked + record.recBooked;
+    record.bookRate = record.totalSpoke ? `${Math.round((record.totalBooked / record.totalSpoke) * 100)}%` : '–';
+    return record;
+  };
+
+  const PASSCODE_KEY = 'drapsPasscode';
+  const readPasscode = () => {
+    try { return localStorage.getItem(PASSCODE_KEY) || ''; } catch { return ''; }
+  };
+  const savePasscode = passcode => {
+    try { localStorage.setItem(PASSCODE_KEY, passcode); } catch { /* storage blocked: passcode is asked again next time */ }
+  };
+  const clearPasscode = () => {
+    try { localStorage.removeItem(PASSCODE_KEY); } catch { /* ignore */ }
+  };
+  const askPasscode = () => {
+    const entered = (window.prompt('Enter the DRAPS passcode:') || '').trim();
+    if (entered) savePasscode(entered);
+    return entered;
+  };
+
+  const sendRequest = (path,body,passcode) => fetch(path,{
+    method:'POST',
+    headers:{'Content-Type':'application/json','x-draps-passcode':passcode},
+    body:JSON.stringify(body)
+  });
+
+  const postJson = async (path,body) => {
+    let passcode = readPasscode() || askPasscode();
+    if (!passcode) throw new Error('A passcode is required');
+    let response = await sendRequest(path,body,passcode);
+
+    if (response.status === 401) {
+      clearPasscode();
+      passcode = askPasscode();
+      if (!passcode) throw new Error('A passcode is required');
+      response = await sendRequest(path,body,passcode);
+      if (response.status === 401) clearPasscode();
+    }
+
+    const result = await response.json().catch(() => ({ok:false,error:`Server returned ${response.status}`}));
+    if(!response.ok || !result.ok) throw new Error(result.error || 'Request failed');
+    return result;
+  };
+
+  const setStatus = (message,tone = '') => {
+    const status = byId('actionStatus');
+    status.textContent = message;
+    status.dataset.tone = tone;
+  };
+
+  const setBusy = (button,busy,label) => {
+    button.disabled = busy;
+    button.textContent = label;
+  };
+
+  const requireRepName = record => {
+    if(record.rep) return true;
+    setStatus('Enter a rep name before publishing or sending.','error');
+    byId('repName').focus();
+    return false;
+  };
+
+  byId('publishBtn').addEventListener('click',async() => {
+    const button = byId('publishBtn');
+    const record = buildRecord();
+    if(!requireRepName(record)) return;
+
+    setBusy(button,true,'Publishing…');
+    setStatus('Publishing to spreadsheet…');
+    try{
+      const result = await postJson(API_PUBLISH,{record});
+      setStatus(`Published ${record.rep} · ${record.date} (${result.mode}).`,'success');
+    }catch(error){
+      setStatus(`Publish failed: ${error.message}`,'error');
+    }finally{
+      setBusy(button,false,'Publish Results');
+    }
+  });
+
+  byId('emailBtn').addEventListener('click',async() => {
+    const button = byId('emailBtn');
+    const record = buildRecord();
+    if(!requireRepName(record)) return;
+
+    const subject = buildSubject(record);
+    if(!window.confirm(`Send this report to management now?\n\n${subject}`)) return;
+
+    setBusy(button,true,'Sending…');
+    setStatus('Sending email…');
+    try{
+      await postJson(API_EMAIL,{subject,body:buildReport()});
+      setStatus(`Sent: ${subject}`,'success');
+    }catch(error){
+      setStatus(`Send failed: ${error.message}`,'error');
+    }finally{
+      setBusy(button,false,'Send to Management');
+    }
   });
 
   byId('dateChip').textContent =
