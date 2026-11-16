@@ -24,3 +24,16 @@ Share the spreadsheet with the service account's email address as Editor.
 
     npm install
     npm run check
+
+## Rep list
+
+Reps are kept on a `Reps` tab in the same spreadsheet as `DRAPS Log`, with columns `Name`, `State`, `Timezone`, `Active`, `Added`.
+
+- A rep picks their name from the dropdown. If they are not listed, they choose **Add my name** and pick their state. The name is added straight away.
+- `State` sets the rep's timezone (for example QLD → `Australia/Brisbane`, WA → `Australia/Perth`). Each day's date and weekday come from that timezone.
+- Ross can edit this tab directly. Set `Active` to `FALSE` to hide a rep from the dropdown; their old rows are kept.
+- `GET /api/reps` and `POST /api/reps` both need the `x-draps-passcode` header.
+
+## Tests
+
+    npm test

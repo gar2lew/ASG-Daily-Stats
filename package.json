@@ -5,7 +5,8 @@
   "type": "module",
   "description": "ASG daily stats (DRAPS) web app with publish and management email routes",
   "scripts": {
-    "check": "node --check api/publish.js && node --check api/email.js && node --check lib/draps.js"
+    "check": "node --check api/publish.js && node --check api/email.js && node --check api/reps.js && node --check lib/draps.js && node --check lib/reps.js && node --check lib/reps-store.js && node --check lib/sheets.js",
+    "test": "node --test test/reps.test.js test/reps-store.test.js test/reps-api.test.js"
   },
   "engines": {
     "node": ">=18"
