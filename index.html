@@ -1162,6 +1162,16 @@
     select.add(new Option('Choose your name', ''));
     repList.forEach(rep => select.add(new Option(rep.name, rep.name)));
     select.value = repList.some(r => r.name === selectedName) ? selectedName : '';
+    updateStartButton();
+  };
+
+  const updateStartButton = () => {
+    byId('gateStartBtn').disabled = !repList.some(r => r.name === byId('repName').value);
+  };
+
+  const showView = view => {
+    document.body.dataset.view = view;
+    byId('changeRepBtn').hidden = view !== 'tally';
   };
 
   const loadReps = async () => {
@@ -1206,8 +1216,21 @@
 
   byId('repName').addEventListener('change',() => {
     saveRepName(byId('repName').value);
+    updateStartButton();
     update();
   });
+
+  byId('gateStartBtn').addEventListener('click',() => {
+    showView('tally');
+    update();
+  });
+
+  byId('changeRepBtn').addEventListener('click',() => {
+    showView('gate');
+    updateStartButton();
+  });
+
+  showView('gate');
 
   loadReps();
 
