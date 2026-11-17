@@ -541,15 +541,16 @@
     .num{width:72px}
     .stats{grid-template-columns:repeat(2,1fr)}
   }
-  /* Gate screen: matches the Irrevoccable Authority landing reference (navy brand panel, ivory form panel, gold accents). */
+  /* ASG landing screen: shared split layout, navy brand panel and ivory form panel. */
   body[data-view="gate"] .topbar,
   body[data-view="gate"] main.app{display:none}
   body[data-view="tally"] #gate{display:none}
   .gate{
     min-height:100vh;
+    min-height:100svh;
     display:flex;
     flex-direction:column;
-    background:linear-gradient(180deg,#f6f2e8 0%,#efe9dc 100%);
+    background:linear-gradient(135deg,#f6f2e8 0%,#efe9dc 100%);
     color:#0a1f3d;
   }
   .gate .gate-brand{
@@ -566,12 +567,12 @@
   .gate-brand h1{margin:28px 0 0;font:500 40px/1.15 Georgia,serif;color:#fff}
   .gate-tagline{margin:12px 0 0;font:italic 19px Georgia,serif;color:#c9a45c}
   .gate-lede{margin:14px auto 0;max-width:36ch;color:rgba(255,255,255,.78);font-size:15px;line-height:1.6}
-  .gate-panel{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:28px 20px 36px}
+  .gate-panel{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:clamp(24px,5vh,56px) clamp(20px,5vw,56px)}
   .gate-eyebrow{margin:0;color:#8a6a2f;font:600 13px 'IBM Plex Sans',sans-serif;letter-spacing:.32em;text-transform:uppercase}
-  .gate-panel .rep-card{width:100%;max-width:460px}
-  .gate-status{width:100%;max-width:460px;margin:0;color:#b00020;font-size:14px;text-align:center}
+  .gate-panel .rep-card{width:100%;max-width:380px}
+  .gate-status{width:100%;max-width:380px;margin:0;color:#b00020;font-size:14px;text-align:center}
   .gate .gate-start{
-    width:100%;max-width:460px;height:56px;border-radius:13px;
+    width:100%;max-width:380px;height:56px;border-radius:13px;
     font:600 16px 'IBM Plex Sans',sans-serif;letter-spacing:.02em;cursor:pointer;
     border:1px solid rgba(255,255,255,.25);
     background:linear-gradient(135deg,#8a6a2f 0%,#d4af6a 50%,#a8843d 100%);
@@ -585,14 +586,14 @@
   .gate-brand > *:not(svg){position:relative;z-index:1}
   .gate-art{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
   .gate-edge{display:none;position:absolute;top:0;right:0;width:130px;height:100%;pointer-events:none}
-  .gate-heading{width:100%;max-width:460px;text-align:center}
+  .gate-heading{width:100%;max-width:440px;text-align:center}
   .gate-h2{margin:12px 0 0;font:600 36px/1.1 Georgia,serif;color:#0a1f3d}
   .gate-ornament{display:flex;align-items:center;justify-content:center;gap:12px;margin-top:18px;color:#b8924a}
   .gate-line{display:block;height:1px;width:90px}
   .gate-line-l{background:linear-gradient(90deg,transparent,#b8924a)}
   .gate-line-r{background:linear-gradient(90deg,#b8924a,transparent)}
   .gate-copy{margin:18px 0 0;color:#3a4a63;font-size:14.5px;line-height:1.6}
-  .gate-retry{width:100%;max-width:460px;min-height:44px;border-radius:13px;cursor:pointer;background:transparent;border:1px solid #b8924a;color:#8a6a2f;font:600 15px 'IBM Plex Sans',sans-serif}
+  .gate-retry{width:100%;max-width:380px;min-height:44px;border-radius:13px;cursor:pointer;background:transparent;border:1px solid #b8924a;color:#8a6a2f;font:600 15px 'IBM Plex Sans',sans-serif}
   .gate-retry[hidden]{display:none}
   .gate-retry:focus-visible{outline:2px solid #b8924a;outline-offset:3px}
   @media (min-width:900px){
@@ -601,12 +602,19 @@
   }
   @media (min-width:900px){
     .gate{flex-direction:row;align-items:stretch}
-    .gate .gate-brand{flex:0 0 40%;display:flex;flex-direction:column;justify-content:center;padding:56px}
+    .gate .gate-brand{flex:0 0 38%;display:flex;flex-direction:column;justify-content:center;padding:clamp(40px,5vw,80px)}
+    .gate-brand > *:not(svg){width:100%;max-width:520px}
     .gate-brand h1{font-size:44px}
     .gate-lockup{justify-content:flex-start}
     .gate-divider{margin-left:0}
     .gate-lede{margin-left:0}
-    .gate-panel{flex:1;padding:56px}
+    .gate-panel{flex:1;padding:clamp(40px,5vw,80px)}
+  }
+  @media (max-width:899px){
+    .gate .gate-brand{padding:36px 24px}
+    .gate-divider{margin-top:20px}
+    .gate-brand h1{margin-top:20px;font-size:clamp(32px,7vw,40px)}
+    .gate-panel{padding:32px 20px 40px}
   }
 </style>
 </head>
