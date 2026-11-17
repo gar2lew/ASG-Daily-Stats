@@ -205,7 +205,7 @@
 
   .grid{
     display:grid;
-    grid-template-columns:1fr 1fr;
+    grid-template-columns:1.12fr .88fr;
     gap:20px;
     align-items:start;
   }
@@ -217,7 +217,8 @@
   }
 
   .col-right{
-    position:static;
+    position:sticky;
+    top:86px;
     display:flex;
     flex-direction:column;
     gap:16px;
@@ -243,7 +244,7 @@
   .brand{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
   .brand-logo{height:44px;width:auto;display:block}
 
-  #pipelines{display:contents}
+  #pipelines{display:flex;flex-direction:column;gap:16px}
   .calls-stack{display:flex;flex-direction:column;gap:16px}
   .card.pipe{--acc:var(--gold)}
 
@@ -689,7 +690,7 @@
 <main class="app">
 
   <div class="grid">
-
+    <div class="col-left">
       <section class="card tally" style="--d:.05s">
         <div class="card-head">
           <span class="dot"></span>
@@ -743,17 +744,9 @@
         </div>
       </section>
 
-      <section class="card preview" style="--d:.25s">
-        <div class="card-head">
-          <span class="live-dot"></span>
-          <span class="card-title">Output</span>
-          <span class="card-tag">live · exact format</span>
-        </div>
-        <div class="report" id="report"></div>
-        <div class="hint">Copy and paste directly into WhatsApp. The same layout is used every day.</div>
-      </section>
+      <div id="pipelines"></div>
 
-      <div class="calls-stack" style="order:20">
+      <div class="calls-stack">
       <section class="card calls" style="--d:.1s">
         <div class="card-head">
           <span class="dot"></span>
@@ -843,11 +836,19 @@
         </div>
       </section>
       </div>
-
-      <div id="pipelines"></div>
-  </div>
+    </div>
 
     <aside class="col-right">
+      <section class="card preview" style="--d:.25s">
+        <div class="card-head">
+          <span class="live-dot"></span>
+          <span class="card-title">Output</span>
+          <span class="card-tag">live · exact format</span>
+        </div>
+        <div class="report" id="report"></div>
+        <div class="hint">Copy and paste directly into WhatsApp. The same layout is used every day.</div>
+      </section>
+
       <div class="stats">
         <div class="stat"><div class="v" id="totalDials">0</div><div class="l">Total Calls</div></div>
         <div class="stat"><div class="v" id="totalSpoke">0</div><div class="l">Spoke To</div></div>
@@ -855,6 +856,7 @@
         <div class="stat"><div class="v" id="bookRate">–</div><div class="l">Book Rate</div></div>
       </div>
     </aside>
+  </div>
 
   <section class="card action-bar" style="--d:.3s">
     <div>
@@ -911,12 +913,12 @@
   ];
 
   // Display order on the input page. Column order in the sheet stays as PIPELINES lists it.
-  const PIPELINE_DISPLAY = ['fcPipe','smsf','financePipe','contract','property','recPipe'];
+  const PIPELINE_DISPLAY = ['fcPipe','financePipe','property','smsf','contract','recPipe'];
 
   const pipelineInputId = (card, field) => `pipe_${card}_${field}`;  // matches pipelineKey() in lib/draps.js
 
   const pipelineIds = [];
-  document.getElementById('pipelines').innerHTML = PIPELINES.map(card => {
+  document.getElementById('pipelines').innerHTML = PIPELINE_DISPLAY.map(key => PIPELINES.find(card => card.key === key)).map(card => {
     const rows = card.fields.map(([field, label]) => {
       const id = pipelineInputId(card.key, field);
       pipelineIds.push(id);
@@ -926,8 +928,7 @@
         `<button class="step" type="button" data-target="${id}" data-delta="1">+</button>` +
         `</span></div>`;
     }).join('');
-    const order = PIPELINE_DISPLAY.indexOf(card.key) + 1;
-    return `<section class="card pipe" style="order:${order}"><div class="card-head"><span class="dot"></span>` +
+    return `<section class="card pipe"><div class="card-head"><span class="dot"></span>` +
       `<span class="card-title">${card.title}</span></div>${rows}</section>`;
   }).join('');
 
