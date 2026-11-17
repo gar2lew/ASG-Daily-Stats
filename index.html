@@ -544,10 +544,9 @@
   /* ASG landing screen: shared split layout, navy brand panel and ivory form panel. */
   body[data-view="gate"] .topbar,
   body[data-view="gate"] main.app{display:none}
+  body[data-view="gate"]{min-height:100vh;min-height:100svh;display:grid;place-items:center;background:linear-gradient(135deg,#f6f2e8 0%,#efe9dc 100%)}
   body[data-view="tally"] #gate{display:none}
   .gate{
-    min-height:100vh;
-    min-height:100svh;
     display:flex;
     flex-direction:column;
     background:linear-gradient(135deg,#f6f2e8 0%,#efe9dc 100%);
@@ -560,20 +559,24 @@
     text-align:center;
   }
   .gate-lockup{display:flex;align-items:center;justify-content:center;gap:16px}
-  .gate-logo{font:400 46px/1 Georgia,serif;letter-spacing:.02em;color:#c9a45c}
-  .gate-rule{width:1px;height:42px;background:linear-gradient(#c9a45c,transparent)}
-  .gate-words{display:flex;flex-direction:column;gap:4px;font:500 12px 'IBM Plex Sans',sans-serif;letter-spacing:.28em;text-align:left}
-  .gate-divider{height:1px;margin:28px auto 0;max-width:320px;background:linear-gradient(90deg,transparent,#c9a45c 30%,#c9a45c 70%,transparent)}
-  .gate-brand h1{margin:28px 0 0;font:500 40px/1.15 Georgia,serif;color:#fff}
-  .gate-tagline{margin:12px 0 0;font:italic 19px Georgia,serif;color:#c9a45c}
-  .gate-lede{margin:14px auto 0;max-width:36ch;color:rgba(255,255,255,.78);font-size:15px;line-height:1.6}
-  .gate-panel{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:clamp(24px,5vh,56px) clamp(20px,5vw,56px)}
-  .gate-eyebrow{margin:0;color:#8a6a2f;font:600 13px 'IBM Plex Sans',sans-serif;letter-spacing:.32em;text-transform:uppercase}
-  .gate-panel .rep-card{width:100%;max-width:380px}
-  .gate-status{width:100%;max-width:380px;margin:0;color:#b00020;font-size:14px;text-align:center}
+  .gate-logo{font:400 76px/1 Georgia,serif;letter-spacing:.02em;color:#c9a45c}
+  .gate-rule{width:1px;height:60px;background:linear-gradient(#c9a45c,transparent)}
+  .gate-words{display:flex;flex-direction:column;gap:5px;font:600 15px 'IBM Plex Sans',sans-serif;letter-spacing:.22em;text-align:left}
+  .gate-divider{height:1px;margin:30px auto 0;max-width:460px;background:linear-gradient(90deg,transparent,#c9a45c 30%,#c9a45c 70%,transparent)}
+  .gate-brand h1{margin:38px 0 0;font:500 58px/1.08 Georgia,serif;color:#fff}
+  .gate-tagline{margin:16px 0 0;font:italic 23px Georgia,serif;color:#c9a45c}
+  .gate-lede{margin:20px auto 0;max-width:38ch;color:rgba(255,255,255,.82);font-size:18px;line-height:1.65}
+  .gate-panel{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;padding:clamp(32px,5vh,64px) clamp(28px,5vw,72px)}
+  .gate-eyebrow{margin:0;color:#8a6a2f;font:700 15px 'IBM Plex Sans',sans-serif;letter-spacing:.3em;text-transform:uppercase}
+  .gate-panel .rep-card{width:100%;max-width:500px;padding:24px 26px;border-radius:18px;gap:18px}
+  .gate-panel .rep-icon{width:56px;height:56px}
+  .gate-panel .rep-field label{margin-bottom:8px;color:#237c5b;font:700 13px 'IBM Plex Sans',sans-serif;letter-spacing:.16em}
+  .gate-panel .rep-field select,.gate-panel .rep-field input{min-height:50px;padding:12px 16px;border-radius:10px;font-size:18px}
+  .gate-panel .rep-add{margin-top:10px;font-size:15px}
+  .gate-panel .gate-status{width:100%;max-width:500px;margin:0;color:#b00020;font-size:16px;text-align:center}
   .gate .gate-start{
-    width:100%;max-width:380px;height:56px;border-radius:13px;
-    font:600 16px 'IBM Plex Sans',sans-serif;letter-spacing:.02em;cursor:pointer;
+    width:100%;max-width:500px;height:66px;border-radius:14px;
+    font:700 18px 'IBM Plex Sans',sans-serif;letter-spacing:.08em;cursor:pointer;
     border:1px solid rgba(255,255,255,.25);
     background:linear-gradient(135deg,#8a6a2f 0%,#d4af6a 50%,#a8843d 100%);
     color:#0a1f3d;
@@ -586,35 +589,60 @@
   .gate-brand > *:not(svg){position:relative;z-index:1}
   .gate-art{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
   .gate-edge{display:none;position:absolute;top:0;right:0;width:130px;height:100%;pointer-events:none}
-  .gate-heading{width:100%;max-width:440px;text-align:center}
-  .gate-h2{margin:12px 0 0;font:600 36px/1.1 Georgia,serif;color:#0a1f3d}
-  .gate-ornament{display:flex;align-items:center;justify-content:center;gap:12px;margin-top:18px;color:#b8924a}
-  .gate-line{display:block;height:1px;width:90px}
+  .gate-heading{width:100%;max-width:540px;text-align:center}
+  .gate-h2{margin:16px 0 0;font:600 48px/1.1 Georgia,serif;color:#0a1f3d}
+  .gate-ornament{display:flex;align-items:center;justify-content:center;gap:14px;margin-top:22px;color:#b8924a}
+  .gate-line{display:block;height:1px;width:110px}
   .gate-line-l{background:linear-gradient(90deg,transparent,#b8924a)}
   .gate-line-r{background:linear-gradient(90deg,#b8924a,transparent)}
-  .gate-copy{margin:18px 0 0;color:#3a4a63;font-size:14.5px;line-height:1.6}
-  .gate-retry{width:100%;max-width:380px;min-height:44px;border-radius:13px;cursor:pointer;background:transparent;border:1px solid #b8924a;color:#8a6a2f;font:600 15px 'IBM Plex Sans',sans-serif}
+  .gate-copy{margin:20px 0 0;color:#3a4a63;font-size:17px;line-height:1.65}
+  .gate-retry{width:100%;max-width:500px;min-height:50px;border-radius:13px;cursor:pointer;background:transparent;border:1px solid #b8924a;color:#8a6a2f;font:600 16px 'IBM Plex Sans',sans-serif}
   .gate-retry[hidden]{display:none}
   .gate-retry:focus-visible{outline:2px solid #b8924a;outline-offset:3px}
   @media (min-width:900px){
     .gate-edge{display:block}
-    .gate-h2{font-size:40px}
-  }
-  @media (min-width:900px){
-    .gate{flex-direction:row;align-items:stretch}
-    .gate .gate-brand{flex:0 0 38%;display:flex;flex-direction:column;justify-content:center;padding:clamp(40px,5vw,80px)}
+    .gate{width:min(1344px,calc(100% - 64px));min-height:min(820px,calc(100svh - 64px));margin:0 auto;flex-direction:row;align-items:stretch;border:1px solid #c9a45c;border-radius:24px;overflow:hidden;box-shadow:0 30px 80px -24px rgba(10,31,61,.3)}
+    .gate .gate-brand{flex:0 0 40%;display:flex;flex-direction:column;justify-content:center;padding:clamp(48px,5vw,72px)}
     .gate-brand > *:not(svg){width:100%;max-width:520px}
-    .gate-brand h1{font-size:44px}
+    .gate-brand h1{font-size:clamp(54px,4.2vw,68px)}
     .gate-lockup{justify-content:flex-start}
     .gate-divider{margin-left:0}
     .gate-lede{margin-left:0}
-    .gate-panel{flex:1;padding:clamp(40px,5vw,80px)}
+    .gate-panel{flex:1;padding:clamp(44px,5vw,76px)}
+  }
+  @media (min-width:900px) and (max-height:760px){
+    .gate{min-height:calc(100svh - 48px);margin:0 auto}
+    .gate .gate-brand,.gate-panel{padding-top:32px;padding-bottom:32px}
+    .gate-brand h1{margin-top:24px;font-size:54px}
+    .gate-tagline{margin-top:12px;font-size:20px}
+    .gate-lede{margin-top:14px;font-size:16px}
+    .gate-panel{gap:16px}
+    .gate-h2{font-size:42px}
   }
   @media (max-width:899px){
-    .gate .gate-brand{padding:36px 24px}
-    .gate-divider{margin-top:20px}
-    .gate-brand h1{margin-top:20px;font-size:clamp(32px,7vw,40px)}
-    .gate-panel{padding:32px 20px 40px}
+    .gate{width:calc(100% - 32px);min-height:calc(100svh - 32px);margin:0 auto;border:1px solid #c9a45c;border-radius:20px;overflow:hidden;box-shadow:0 18px 48px -24px rgba(10,31,61,.28)}
+    .gate .gate-brand{padding:32px 24px}
+    .gate-logo{font-size:58px}
+    .gate-rule{height:48px}
+    .gate-words{font-size:12px}
+    .gate-divider{margin-top:22px}
+    .gate-brand h1{margin-top:24px;font-size:clamp(38px,8vw,52px)}
+    .gate-tagline{font-size:20px}
+    .gate-lede{font-size:16px}
+    .gate-panel{padding:40px clamp(20px,6vw,40px) 48px;gap:18px}
+    .gate-h2{font-size:clamp(34px,7vw,44px)}
+    .gate-copy{font-size:16px}
+    .gate-panel .rep-card{padding:20px;gap:14px}
+    .gate .gate-start{height:60px;font-size:17px}
+  }
+  @media (max-width:420px){
+    .gate{width:calc(100% - 24px);min-height:calc(100svh - 24px);margin:0 auto}
+    .gate .gate-brand{padding:28px 18px}
+    .gate-brand h1{font-size:38px}
+    .gate-panel{padding:32px 16px 36px}
+    .gate-panel .rep-icon{width:46px;height:46px}
+    .gate-panel .rep-card{padding:16px;gap:12px}
+    .gate-panel .rep-field select,.gate-panel .rep-field input{font-size:16px}
   }
 </style>
 </head>

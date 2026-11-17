@@ -1,32 +1,33 @@
 # ASG Web App Login Design Spec
 
-Reusable design standard for the entry or welcome screen used by ASG web apps. Match the desktop proportions, mobile stacking, branding and form scale in this spec; change only the app name, short purpose line, form fields and primary action label.
+Reusable design standard for the entry or welcome screen used by ASG web apps. This is based on the supplied Client Appointment Checklist login reference. Match its centered gold-edged frame, panel proportions, larger typography, branding, and form scale; change only the app name, purpose copy, fields, and primary action.
 
 ## Layout
 
-- Fill the viewport (`min-height: 100vh`, with `100svh` support) and avoid page-level horizontal scrolling.
-- Desktop at 900px and wider: two full-height panels. Brand panel is 38% of the width; the light form panel takes the remaining 62%.
-- Center brand and form content vertically. Keep brand content to 520px and form content to 440px maximum.
-- The primary form card and actions share a 380px maximum width. Align their left and right edges.
-- Below 900px: stack the brand panel above the form panel. Keep the brand heading readable and the form within a 380px centered column.
-- On narrow phones, use 16–20px side padding, full-width controls, a minimum 44px control height, and no fixed-width elements that cause horizontal overflow.
+- Use a warm ivory page ground and center a framed login composition in the viewport.
+- Desktop at 900px and wider: frame width up to 1344px, minimum height up to 820px, 32px outer margin, thin gold border, 24px rounded corners, and a broad soft shadow.
+- Split the frame into a 40% navy brand panel and a 60% ivory form panel. Center both panels' content vertically.
+- Keep brand copy to 520px, form heading to 540px, and form fields/actions to 500px maximum; align form field and action edges.
+- At viewport heights below 760px, reduce vertical padding and type scale slightly so the full form remains balanced.
+- Below 900px: stack the panels inside a frame with 12–16px outer margins and 20px corners. Keep full-width controls in a centered column.
+- On narrow phones, use 16px inner gutters, readable 16px inputs, controls at least 44px tall, and no horizontal overflow.
 
 ## Brand panel
 
 - Deep navy gradient background: `#0a1f3d` through `#04101f`; white title and copy.
-- ASG lockup: gold `#c9a45c` serif letters, a fine gold divider, and uppercase white `AMPLIFY / SOLUTIONS / GROUP` wordmark.
-- Main app title: Georgia or a similar serif, 40px desktop (44px on wide desktop), 32–40px when stacked; regular weight and 1.15 line height.
-- Optional short uppercase gold strapline: 12–14px, bold, with generous letter spacing. Purpose copy: 15px with 1.6 line height and a comfortable 36-character measure.
+- ASG lockup: prominent gold `#c9a45c` serif letters (76px desktop, 58px stacked), a fine gold divider, and uppercase white `AMPLIFY / SOLUTIONS / GROUP` wordmark (15px desktop).
+- Main app title: Georgia or similar serif, 54–68px desktop, 38–52px stacked; regular weight and close to 1.08 line height.
+- Optional short uppercase gold strapline: 14–16px, bold, with generous letter spacing. Purpose copy: 16–18px with 1.6 line height and a comfortable 38-character measure.
 - Use restrained line art or a subtle radial navy gradient as background texture. Keep it decorative and behind content.
 
 ## Form panel
 
 - Warm ivory background: `#f6f2e8` to `#efe9dc`. Use dark navy `#0a1f3d` for headings and body copy `#3a4a63`.
-- Small uppercase gold section label, 13px, semibold, letter spacing around `.3em`.
-- Form heading: Georgia, 36px (40px on wide desktop), semibold, 1.1 line height. Center it on the panel.
+- Small uppercase gold section label, 15px, bold, letter spacing around `.3em`.
+- Form heading: Georgia, 42–48px, semibold, 1.1 line height. Center it on the panel.
 - Place a thin gold line and small lock/security mark beneath the heading, followed by one concise instruction line.
-- Form fields sit in a quiet ivory/white card with a fine warm border, 12px corners, and a soft shadow. Labels are compact uppercase; input text is at least 16px.
-- Primary action spans the form column, is 56px high, and uses a gold gradient (`#8a6a2f`, `#d4af6a`, `#a8843d`), navy text, 13px corners, and a soft shadow. Disabled state uses pale stone and muted text.
+- Form fields sit in a quiet ivory/white card with a fine warm border, 18px corners, 24–26px padding, and a soft shadow. Labels are uppercase, 13–14px; input text is 18px desktop and at least 16px on phones.
+- Primary action spans the form column, is 66px high (60px stacked), and uses a gold gradient (`#8a6a2f`, `#d4af6a`, `#a8843d`), bold navy text at 17–18px, 14px corners, and a soft shadow. Disabled state uses pale stone and muted text.
 
 ## Shared design tokens
 
@@ -54,7 +55,7 @@ Reusable design standard for the entry or welcome screen used by ASG web apps. M
 
 ## Acceptance checklist
 
-- At desktop width, the brand panel is 38% and the form is centered in the remaining panel.
-- At 375px width, panels stack, controls fit inside the viewport, and there is no horizontal page scroll.
+- At desktop width, a centered gold-edged frame is visible, split 40/60, with larger, readable brand and form text.
+- At 375px width, the framed panels stack, controls fit inside the viewport, and there is no horizontal page scroll.
 - ASG lockup, navy/gold/ivory palette, serif display headings, and consistent form/action widths match this spec.
 - App-specific fields and copy fit without changing the shared spacing, hierarchy, or responsive behavior.
