@@ -1,5 +1,5 @@
 import { google } from 'googleapis';
-import { COLUMNS, SHEET_TAB, validateRecord, assertEnv, checkPasscode } from '../lib/draps.js';
+import { COLUMNS, SHEET_TAB, validateRecord, assertEnv, checkPasscode, missingHeaders } from '../lib/draps.js';
 
 // POST /api/publish  { record }   header: x-draps-passcode
 // Writes one row per rep per date to the DRAPS Log tab. Republishing the same
@@ -35,6 +35,7 @@ export default async function handler(req, res) {
     });
 
     const rows = existing.data.values || [];
+    if (rows.length > 0) await extendHeader(sheets, spreadsheetId);
     const index = rows.findIndex((r, i) => i > 0 && r[0] === record.date && (r[2] || '').trim() === record.rep);
 
     if (index > 0) {
@@ -70,6 +71,19 @@ export default async function handler(req, res) {
     console.error('publish failed', error);
     return res.status(500).json({ ok: false, error: 'Could not write to the spreadsheet. Check the server logs.' });
   }
+}
+
+// Adds header cells for columns added since the tab was created. Existing headers are left alone.
+async function extendHeader(sheets, spreadsheetId) {
+  const header = await sheets.spreadsheets.values.get({ spreadsheetId, range: `'${SHEET_TAB}'!1:1` });
+  const missing = missingHeaders(header.data.values?.[0]);
+  if (!missing) return;
+  await sheets.spreadsheets.values.update({
+    spreadsheetId,
+    range: `'${SHEET_TAB}'!${missing.startColumn}1`,
+    valueInputOption: 'RAW',
+    requestBody: { values: [missing.headers] },
+  });
 }
 
 // Creates the DRAPS Log tab if the spreadsheet does not have it yet.

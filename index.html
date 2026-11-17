@@ -241,6 +241,22 @@
     box-shadow:0 12px 30px -18px rgba(22,38,62,.35);
   }
 
+  .brand{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+  .brand-logo{height:44px;width:auto;display:block}
+
+  .pipeline-grid{
+    margin-top:20px;
+    display:grid;
+    grid-template-columns:1fr;
+    gap:16px;
+    align-items:start;
+  }
+
+  .card.pipe{--acc:var(--gold)}
+  @media(min-width:921px){
+    .pipeline-grid{grid-template-columns:1fr 1fr}
+  }
+
   .card.tally,.card.fc{--acc:var(--gold)}
   .card.calls,.card.rec{--acc:var(--green)}
 
@@ -667,7 +683,10 @@
 
 <header class="topbar">
   <div class="topbar-inner">
-    <h1>Daily Stats <span class="asg">- ASG</span></h1>
+    <div class="brand">
+      <img class="brand-logo" src="/assets/asg-logo.png" alt="ASG Amplify Solutions Group" width="176" height="44">
+      <h1>Daily Stats <span class="asg">- ASG</span></h1>
+    </div>
     <div class="head-right">
       <div class="date-chip" id="dateChip"></div>
       <button class="btn gold" id="copyBtn" type="button">Copy Report</button>
@@ -845,6 +864,8 @@
     </aside>
   </div>
 
+  <div class="pipeline-grid" id="pipelines"></div>
+
   <section class="card action-bar" style="--d:.3s">
     <div>
       <div class="action-title">End of Day</div>
@@ -886,6 +907,38 @@
     'fcCalls','fcSpoke','fcBooked',
     'recCalls','recSpoke','recBooked'
   ];
+
+  // Pipeline cards, in the order of "DRAPS Design Draft.docx". Their inputs are kept on
+  // this device and included in the on-screen output, copy and email. They are not part
+  // of the publish record, so the DRAPS Log columns are unchanged.
+  const PIPELINES = [
+    { key: 'smsf', title: 'Property Sale - SMSF', fields: [['referrals','Referrals'],['appointments','Appointments'],['presented','Presented'],['sold','Sold (EOI Signed)'],['ra','RA']] },
+    { key: 'fcPipe', title: 'First Consult', fields: [['referrals','Referrals'],['appointments','Appointments'],['presented','Presented'],['sold','Sold (FR Booked)'],['ra','RA']] },
+    { key: 'contract', title: 'Contract Signed', fields: [['booked','Booked'],['presented','Presented'],['sold','Sold']] },
+    { key: 'financePipe', title: 'Finance Run', fields: [['referrals','Referrals'],['appointments','Appointments'],['presented','Presented'],['sold','Sold (Sale Booked)'],['ra','RA']] },
+    { key: 'recPipe', title: 'Recruitment', fields: [['calls','Calls Made'],['spokeWith','Spoke With'],['booked','Booked'],['interviewed','Interviewed']] },
+    { key: 'property', title: 'Property Sale', fields: [['referrals','Referrals'],['appointments','Appointments'],['presented','Presented'],['sold','Sold (EOI Signed)'],['ra','RA']] }
+  ];
+
+  const pipelineInputId = (card, field) => `pipe_${card}_${field}`;  // matches pipelineKey() in lib/draps.js
+
+  const pipelineIds = [];
+  document.getElementById('pipelines').innerHTML = PIPELINES.map(card => {
+    const rows = card.fields.map(([field, label]) => {
+      const id = pipelineInputId(card.key, field);
+      pipelineIds.push(id);
+      return `<div class="row"><span class="row-label">${label}</span><span class="step-group">` +
+        `<button class="step" type="button" data-target="${id}" data-delta="-1">−</button>` +
+        `<input class="num" id="${id}" type="number" min="0" max="9999" step="1" value="0" aria-label="${card.title} ${label}">` +
+        `<button class="step" type="button" data-target="${id}" data-delta="1">+</button>` +
+        `</span></div>`;
+    }).join('');
+    return `<section class="card pipe"><div class="card-head"><span class="dot"></span>` +
+      `<span class="card-title">${card.title}</span></div>${rows}</section>`;
+  }).join('');
+
+  fieldIds.push(...pipelineIds);
+  numberIds.push(...pipelineIds);
 
   const byId = id => document.getElementById(id);
 
@@ -952,7 +1005,10 @@
       `Booked - ${numberValue('fcBooked')}\n\n` +
       `Recruitment - ${numberValue('recCalls')}\n` +
       `Spoke To - ${numberValue('recSpoke')}\n` +
-      `Booked - ${numberValue('recBooked')}`;
+      `Booked - ${numberValue('recBooked')}` +
+      PIPELINES.map(card => `\n\n${card.title}\n` +
+        card.fields.map(([field,label]) => `${label} - ${numberValue(pipelineInputId(card.key,field))}`).join('\n')
+      ).join('');
   };
 
   const render = () => {
@@ -1097,6 +1153,10 @@
 
     ['leadCalls','firstConsultCalls','financeRunCalls','coffeeRunCalls',
      'fcCalls','fcSpoke','fcBooked','recCalls','recSpoke','recBooked'].forEach(id => {
+      record[id] = numberValue(id);
+    });
+
+    pipelineIds.forEach(id => {
       record[id] = numberValue(id);
     });
 
