@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Staff Portal - ASG</title>
+<title>ASG Web App Central Hub</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
@@ -17,73 +17,104 @@
   *{box-sizing:border-box;margin:0;padding:0}
   body{
     min-height:100vh;
+    min-height:100svh;
     font-family:'IBM Plex Sans',sans-serif;
-    background:linear-gradient(180deg,#f6f2e8 0%,var(--stone) 100%);
+    display:grid;place-items:center;
+    background:linear-gradient(135deg,#f6f2e8 0%,var(--stone) 100%);
     color:var(--ink);
   }
   a:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
 
-  .portal{min-height:100vh;display:flex;flex-direction:column}
+  .portal{width:calc(100% - 48px);max-width:1720px;min-height:min(820px,calc(100svh - 64px));display:flex;flex-direction:column;border:1px solid var(--gold-hi);border-radius:22px;background:#f8f5ee;box-shadow:0 24px 64px -32px rgba(10,31,61,.34)}
   .portal-brand{
     position:relative;overflow:hidden;
     background:radial-gradient(120% 80% at 20% 10%,#0a1f3d 0%,#06152b 70%,#04101f 100%);
-    color:#fff;padding:36px 24px 40px;text-align:center;
+    color:#fff;padding:40px 24px;text-align:center;
   }
   .portal-brand > *:not(svg){position:relative;z-index:1}
   .brand-art{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
   .lockup{display:flex;align-items:center;justify-content:center;gap:16px}
-  .logo{font:400 46px/1 Georgia,serif;letter-spacing:.02em;color:var(--gold-hi)}
-  .rule{width:1px;height:42px;background:linear-gradient(var(--gold-hi),transparent)}
-  .words{display:flex;flex-direction:column;gap:4px;font:500 12px 'IBM Plex Sans',sans-serif;letter-spacing:.28em;text-align:left}
-  .divider{height:1px;margin:28px auto 0;max-width:320px;background:linear-gradient(90deg,transparent,var(--gold-hi) 30%,var(--gold-hi) 70%,transparent)}
-  .portal-brand h1{margin:28px 0 0;font:500 40px/1.15 Georgia,serif;color:#fff}
-  .tagline{margin:12px 0 0;font:italic 19px Georgia,serif;color:var(--gold-hi)}
-  .lede{margin:14px auto 0;max-width:36ch;color:rgba(255,255,255,.78);font-size:15px;line-height:1.6}
+  .logo{font:400 58px/1 Georgia,serif;letter-spacing:.02em;color:var(--gold-hi)}
+  .rule{width:1px;height:48px;background:linear-gradient(var(--gold-hi),transparent)}
+  .words{display:flex;flex-direction:column;gap:4px;font:600 12px 'IBM Plex Sans',sans-serif;letter-spacing:.2em;text-align:left}
+  .divider{height:1px;margin:24px auto 0;max-width:360px;background:linear-gradient(90deg,transparent,var(--gold-hi) 30%,var(--gold-hi) 70%,transparent)}
+  .portal-brand h1{margin:30px 0 0;font:500 48px/1.08 Georgia,serif;color:#fff}
+  .tagline{margin:14px 0 0;font:italic 19px Georgia,serif;color:var(--gold-hi)}
+  .lede{margin:16px auto 0;max-width:34ch;color:rgba(255,255,255,.82);font-size:16px;line-height:1.6}
 
-  .portal-panel{flex:1;display:flex;flex-direction:column;align-items:center;gap:16px;padding:28px 16px 40px}
-  .heading{width:100%;max-width:720px;text-align:center}
-  .eyebrow{display:block;color:var(--gold-deep);font:600 13px 'IBM Plex Sans',sans-serif;letter-spacing:.32em;text-transform:uppercase}
-  .h2{margin:12px 0 0;font:600 34px/1.1 Georgia,serif;color:var(--ink)}
-  .copy{margin:14px 0 0;color:var(--body);font-size:14.5px;line-height:1.6}
+  .portal-panel{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:24px;padding:clamp(32px,3.2vw,52px) clamp(28px,3.2vw,56px)}
+  .heading{width:100%;max-width:1180px;text-align:left}
+  .eyebrow{display:none}
+  .h2{margin:0;font:600 38px/1.1 Georgia,serif;color:var(--ink)}
+  .copy{margin:9px 0 0;color:var(--body);font-size:15px;line-height:1.55}
 
   .apps{
-    list-style:none;width:100%;max-width:720px;
-    display:grid;grid-template-columns:1fr;gap:12px;margin-top:8px;
+    list-style:none;width:100%;max-width:1180px;
+    display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,250px),1fr));gap:16px;margin-top:0;
   }
-  .app-link{
-    display:flex;align-items:center;gap:16px;
-    padding:18px 20px;min-height:44px;
-    background:var(--card);border:1px solid var(--border);border-radius:14px;
-    box-shadow:0 14px 34px -22px rgba(10,31,61,.45);
-    color:inherit;text-decoration:none;
-    transition:border-color .15s,transform .15s;
+  .app-card{
+    min-width:0;overflow:hidden;border:1px solid #ded7c9;border-radius:13px;
+    background:#fffdf9;transition:border-color .16s,background-color .16s;
   }
-  .app-link:hover{border-color:var(--gold);transform:translateY(-1px)}
-  .app-icon{
-    flex:0 0 44px;height:44px;border-radius:12px;
-    display:flex;align-items:center;justify-content:center;
-    background:linear-gradient(135deg,#0a1f3d,#16324f);color:var(--gold-hi);
-  }
-  .app-text{flex:1;min-width:0}
-  .app-name{display:block;font:600 16px/1.3 'IBM Plex Sans',sans-serif;color:var(--ink)}
-  .app-desc{display:block;margin-top:2px;font-size:13.5px;line-height:1.5;color:var(--muted)}
-  .app-arrow{flex:0 0 auto;color:var(--gold-deep)}
+  .app-card:hover{border-color:var(--gold);background:#fff}
+  .app-preview{position:relative;display:grid;place-items:center;width:100%;aspect-ratio:1.78/1;overflow:hidden;background:#e9e4da;border-bottom:1px solid #e0d9ca}
+  .app-preview img{display:block;width:100%;height:100%;object-fit:cover;object-position:top center}
+  .app-preview-pending{display:grid;place-items:center;width:100%;height:100%;padding:24px;background:linear-gradient(135deg,#0a1f3d,#06152b);color:var(--gold-hi);font:italic 20px Georgia,serif;text-align:center}
+  .app-link{display:flex;flex-direction:column;gap:10px;min-height:120px;padding:16px 18px;color:inherit;text-decoration:none}
+  .app-text{display:block;min-width:0}
+  .app-name{display:block;font:600 19px/1.25 Georgia,serif;color:var(--ink)}
+  .app-desc{display:block;margin-top:5px;font-size:14px;line-height:1.45;color:var(--muted)}
+  .app-action{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:auto;color:var(--gold-deep);font:600 13px 'IBM Plex Sans',sans-serif}
+  .app-link:focus-visible,.resource-link:focus-visible{outline:3px solid var(--gold);outline-offset:-3px;border-radius:12px}
+  .resources-wrap{width:100%;max-width:1180px;margin-top:0}
+  .resources-title{margin:0 0 10px;color:var(--ink);font:600 20px Georgia,serif}
+  .resources{list-style:none;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr));column-gap:28px;border-top:1px solid #d9d1c0}
+  .resource-link{display:flex;align-items:center;justify-content:space-between;gap:16px;min-height:60px;padding:13px 2px;border-bottom:1px solid #d9d1c0;color:var(--body);text-decoration:none;transition:color .16s,border-color .16s}
+  .resource-link:hover{color:var(--ink);border-color:var(--gold)}
+  .resource-name{font:500 15px/1.35 'IBM Plex Sans',sans-serif}
+  .resource-action{flex:0 0 auto;color:var(--gold-deep);font:600 13px 'IBM Plex Sans',sans-serif}
 
-  .empty{width:100%;max-width:720px;color:var(--muted);text-align:center;font-size:14px}
-  .foot{margin-top:8px;color:var(--muted);font-size:12.5px;text-align:center}
+  .empty{width:100%;max-width:1180px;color:var(--muted);font-size:14px}
+  .foot{margin-top:2px;color:var(--muted);font-size:12px;text-align:left}
 
   @media (min-width:900px){
     .portal{flex-direction:row;align-items:stretch}
-    .portal-brand{flex:0 0 40%;display:flex;flex-direction:column;justify-content:center;padding:56px}
-    .portal-brand h1{font-size:44px}
+    .portal-brand{position:sticky;top:24px;align-self:flex-start;height:calc(100svh - 48px);flex:0 0 30%;display:flex;flex-direction:column;justify-content:center;padding:clamp(36px,3.4vw,58px);border-radius:21px 0 0 21px}
+    .portal-brand > *:not(svg){width:100%;max-width:420px}
+    .portal-brand h1{font-size:clamp(42px,3.4vw,54px)}
     .lockup{justify-content:flex-start}
     .divider{margin-left:0}
     .lede{margin-left:0}
-    .portal-panel{flex:1;padding:56px;justify-content:center}
-    .h2{font-size:40px}
+    .portal-panel{flex:1;justify-content:center;padding:clamp(30px,3vw,48px)}
   }
   @media (min-width:1100px){
-    .apps{grid-template-columns:1fr 1fr}
+    .apps{grid-template-columns:repeat(2,minmax(0,1fr))}
+  }
+  @media (min-width:1550px){
+    .apps{grid-template-columns:repeat(3,minmax(0,1fr))}
+  }
+  @media (max-width:899px){
+    .portal{width:calc(100% - 32px);max-width:760px;min-height:calc(100svh - 32px);margin:16px auto;border-radius:20px}
+    .portal-brand{padding:32px 24px}
+    .divider{margin-top:22px}
+    .portal-brand h1{margin-top:24px;font-size:clamp(38px,8vw,52px)}
+    .tagline{font-size:20px}.lede{font-size:16px}
+    .portal-panel{padding:32px 24px 40px;gap:20px}
+    .h2{font-size:clamp(34px,7vw,44px)}.copy{font-size:16px}
+    .apps,.resources-wrap,.heading{max-width:760px}
+    .apps,.resources{grid-template-columns:1fr}
+    .portal-brand h1{max-width:640px!important}
+  }
+  @media (prefers-reduced-motion:reduce){
+    *,*::before,*::after{scroll-behavior:auto!important;transition-duration:.01ms!important;animation-duration:.01ms!important;animation-iteration-count:1!important}
+  }
+  @media (max-width:420px){
+    .portal{width:calc(100% - 24px);margin:12px auto}
+    .portal-brand{padding:28px 18px}
+    .portal-brand h1{font-size:38px}
+    .portal-panel{padding:32px 16px 36px}
+    .app-link{min-height:136px;padding:16px}
+    .app-action{padding:10px 12px;font-size:10px}
   }
 </style>
 </head>
@@ -101,20 +132,23 @@
     </svg>
     <div class="lockup"><span class="logo">ASG</span><span class="rule"></span><span class="words"><span>AMPLIFY</span><span>SOLUTIONS</span><span>GROUP</span></span></div>
     <div class="divider"></div>
-    <h1>Staff Portal</h1>
-    <p class="tagline">One place for every internal system.</p>
-    <p class="lede">Pick the tool you need. Each opens in its own page, with its own sign-in where it has one.</p>
+    <h1>ASG Web App Central Hub</h1>
+    <p class="tagline">Every ASG tool, one starting point.</p>
+    <p class="lede">Open the app you need for today's work. Each system keeps its own access and sign-in.</p>
   </header>
 
   <main class="portal-panel">
     <div class="heading">
-      <span class="eyebrow">Internal Apps</span>
-      <h2 class="h2">Where do you want to go?</h2>
-      <p class="copy">Select an app to open it. Bookmark this page so you never have to hunt for a link again.</p>
+      <h2 class="h2">Choose a tool</h2>
+      <p class="copy">Open a work app or go straight to a shared spreadsheet.</p>
     </div>
 
     <!-- To add an app, add one object to APPS below. Keep url as a full https link. -->
-    <ul class="apps" id="appList" aria-label="Internal apps"></ul>
+    <ul class="apps" id="appList" aria-label="ASG web apps"></ul>
+    <section class="resources-wrap" aria-labelledby="resourcesTitle">
+      <h3 class="resources-title" id="resourcesTitle">Relevant Google Sheets</h3>
+      <ul class="resources" id="resourceList" aria-label="Relevant Google spreadsheets"></ul>
+    </section>
     <p id="emptyState" class="empty" hidden>No apps are listed yet.</p>
 
     <p class="foot">ASG internal use only.</p>
@@ -126,23 +160,88 @@
   const APPS = [
     {
       name: 'Daily DRAPS Input',
+      category: 'Daily Reporting',
+      badge: 'DRAPS',
+      previewAsset: 'assets/app-previews/daily-draps.png',
       description: 'Enter today\'s figures and publish them to the weekly report.',
-      url: '/'
+      url: 'https://asg-daily-stats.vercel.app/'
     },
     {
-      name: 'DRAPS Daily Sheet',
-      description: 'The live spreadsheet holding the rep list, daily log and weekly report.',
-      url: 'https://docs.google.com/spreadsheets/d/157IwTtLV93_dNhqUPu4ZGTvw3WhbnvbL9PsjuBMh28M/edit'
+      name: 'Perth Leads',
+      category: 'Operations',
+      badge: 'LEADS',
+      description: 'Perth leads workbook.',
+      url: 'https://docs.google.com/spreadsheets/d/15bh3bkAMpwIhi3MJ2-INA8njG3spgUW8CGVb_ckJ26I/edit?gid=0#gid=0'
+    },
+    {
+      name: 'Brisbane Leads',
+      category: 'Operations',
+      badge: 'LEADS',
+      description: 'Brisbane leads workbook.',
+      url: 'https://docs.google.com/spreadsheets/d/1AO6VZzJXr6btECVZrWFTKFXPBNMkjmuDsKiCisrjcrM/edit?gid=0#gid=0'
+    },
+    {
+      name: 'First Consults to be Rebooked',
+      category: 'Operations',
+      badge: 'REBOOK',
+      description: 'Track first consults that need to be rebooked.',
+      url: 'https://docs.google.com/spreadsheets/d/1aVMNoWpaBysCU0B920OrrHWrnElO9x1iZAeCVK9FENo/edit?gid=0#gid=0'
+    },
+    {
+      name: 'Finance Runs to be Rebooked',
+      category: 'Operations',
+      badge: 'REBOOK',
+      description: 'Track finance runs that need to be rebooked.',
+      url: 'https://docs.google.com/spreadsheets/d/1CrpQyjJsXMvTW9rLLGucolN7Lokhvnxt1djOKg9-0mU/edit?gid=1761057396#gid=1761057396'
+    },
+    {
+      name: 'Finance Run Tracking',
+      category: 'Operations',
+      badge: 'FINANCE',
+      description: 'Finance run tracking workbook.',
+      url: 'https://docs.google.com/spreadsheets/d/1cRx3SDliH91wwp9iwl4cmc81ddDk8zDPQKYcNamUrO8/edit?gid=1978030806#gid=1978030806'
     },
     {
       name: 'Sales Checklist',
-      description: 'The sales checklist app.',
+      category: 'Client Meetings',
+      badge: 'SALES',
+      previewAsset: 'assets/app-previews/sales-checklist.png',
+      description: 'Complete and manage the sales appointment checklist.',
       url: 'https://saleschecklistia.vercel.app/'
+    },
+    {
+      name: 'PIA Calculator',
+      category: 'Calculators',
+      badge: 'PIA',
+      previewAsset: 'assets/app-previews/pia-calculator.png',
+      description: 'Open the PIA Calculator for client scenarios.',
+      url: 'https://amplify-pia-calculator.vercel.app/'
+    },
+    {
+      name: 'SMSF Comparison',
+      category: 'Calculators',
+      badge: 'SMSF',
+      description: 'Compare SMSF property and lending scenarios.',
+      previewPending: true,
+      url: 'https://smsf-comparison-calculator.vercel.app/'
+    },
+    {
+      name: 'ID + Awards Studio',
+      category: 'Design & Documents',
+      badge: 'ID',
+      previewAsset: 'assets/app-previews/print-studio.png',
+      description: 'Create staff identification cards and awards.',
+      url: 'https://asg-print-studio.vercel.app/'
+    },
+    {
+      name: 'ASG Invoice Hub',
+      category: 'Finance',
+      badge: 'INVOICE',
+      previewAsset: 'assets/app-previews/invoice-hub.png',
+      description: 'Open the ASG invoice hub.',
+      url: 'https://asg-invoice-hub.vercel.app/'
     }
   ];
-
-  const ICON = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4h16v16H4z"/><path d="M4 9h16"/></svg>';
-  const ARROW = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17L17 7M9 7h8v8"/></svg>';
 
   function isSafeUrl(value) {
     try {
@@ -153,8 +252,7 @@
     }
   }
 
-  function renderApps(list) {
-    const ul = document.getElementById('appList');
+  function renderApps(list, ul) {
     const empty = document.getElementById('emptyState');
     const apps = list.filter(app => app && app.name && app.url && isSafeUrl(app.url));
     if (apps.length === 0) {
@@ -163,12 +261,43 @@
     }
     for (const app of apps) {
       const li = document.createElement('li');
+      if (ul.id === 'resourceList') {
+        const link = document.createElement('a');
+        link.className = 'resource-link';
+        link.href = app.url;
+        const name = document.createElement('span');
+        name.className = 'resource-name';
+        name.textContent = app.name;
+        const action = document.createElement('span');
+        action.className = 'resource-action';
+        action.setAttribute('aria-hidden', 'true');
+        action.textContent = 'Open ↗';
+        link.append(name, action);
+        li.append(link);
+        ul.append(li);
+        continue;
+      }
+      const card = document.createElement('article');
+      card.className = 'app-card';
+      const preview = document.createElement('div');
+      preview.className = 'app-preview';
+      if (app.previewAsset) {
+        const image = document.createElement('img');
+        image.src = app.previewAsset;
+        image.alt = '';
+        image.loading = 'lazy';
+        image.decoding = 'async';
+        preview.append(image);
+      } else {
+        const pending = document.createElement('span');
+        pending.className = 'app-preview-pending';
+        pending.textContent = 'Screenshot pending';
+        preview.append(pending);
+      }
+      card.append(preview);
       const a = document.createElement('a');
       a.className = 'app-link';
       a.href = app.url;
-      const icon = document.createElement('span');
-      icon.className = 'app-icon';
-      icon.innerHTML = ICON;
       const text = document.createElement('span');
       text.className = 'app-text';
       const name = document.createElement('span');
@@ -176,18 +305,20 @@
       name.textContent = app.name;
       const desc = document.createElement('span');
       desc.className = 'app-desc';
-      desc.textContent = app.description || '';
+      desc.textContent = app.previewPending ? 'App preview will be added when the calculator is ready.' : app.description || '';
       text.append(name, desc);
-      const arrow = document.createElement('span');
-      arrow.className = 'app-arrow';
-      arrow.innerHTML = ARROW;
-      a.append(icon, text, arrow);
-      li.append(a);
+      const action = document.createElement('span');
+      action.className = 'app-action';
+      action.textContent = 'Open app ↗';
+      a.append(text, action);
+      card.append(a);
+      li.append(card);
       ul.append(li);
     }
   }
 
-  renderApps(APPS);
+    renderApps(APPS.filter(app => app.category !== 'Operations'), document.getElementById('appList'));
+  renderApps(APPS.filter(app => app.category === 'Operations'), document.getElementById('resourceList'));
 </script>
 </body>
 </html>
