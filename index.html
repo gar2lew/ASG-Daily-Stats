@@ -205,7 +205,7 @@
 
   .grid{
     display:grid;
-    grid-template-columns:1.12fr .88fr;
+    grid-template-columns:1fr 1fr;
     gap:20px;
     align-items:start;
   }
@@ -217,8 +217,7 @@
   }
 
   .col-right{
-    position:sticky;
-    top:86px;
+    position:static;
     display:flex;
     flex-direction:column;
     gap:16px;
@@ -244,18 +243,9 @@
   .brand{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
   .brand-logo{height:44px;width:auto;display:block}
 
-  .pipeline-grid{
-    margin-top:20px;
-    display:grid;
-    grid-template-columns:1fr;
-    gap:16px;
-    align-items:start;
-  }
-
+  #pipelines{display:contents}
+  .calls-stack{display:flex;flex-direction:column;gap:16px}
   .card.pipe{--acc:var(--gold)}
-  @media(min-width:921px){
-    .pipeline-grid{grid-template-columns:1fr 1fr}
-  }
 
   .card.tally,.card.fc{--acc:var(--gold)}
   .card.calls,.card.rec{--acc:var(--green)}
@@ -699,7 +689,6 @@
 <main class="app">
 
   <div class="grid">
-    <div class="col-left">
 
       <section class="card tally" style="--d:.05s">
         <div class="card-head">
@@ -754,6 +743,7 @@
         </div>
       </section>
 
+      <div class="calls-stack">
       <section class="card calls" style="--d:.1s">
         <div class="card-head">
           <span class="dot"></span>
@@ -842,7 +832,10 @@
           </span>
         </div>
       </section>
-    </div>
+      </div>
+
+      <div id="pipelines"></div>
+  </div>
 
     <aside class="col-right">
       <section class="card preview" style="--d:.25s">
@@ -862,9 +855,6 @@
         <div class="stat"><div class="v" id="bookRate">–</div><div class="l">Book Rate</div></div>
       </div>
     </aside>
-  </div>
-
-  <div class="pipeline-grid" id="pipelines"></div>
 
   <section class="card action-bar" style="--d:.3s">
     <div>
@@ -920,6 +910,9 @@
     { key: 'property', title: 'Property Sale', fields: [['referrals','Referrals'],['appointments','Appointments'],['presented','Presented'],['sold','Sold (EOI Signed)'],['ra','RA']] }
   ];
 
+  // Display order on the input page. Column order in the sheet stays as PIPELINES lists it.
+  const PIPELINE_DISPLAY = ['fcPipe','smsf','financePipe','contract','property','recPipe'];
+
   const pipelineInputId = (card, field) => `pipe_${card}_${field}`;  // matches pipelineKey() in lib/draps.js
 
   const pipelineIds = [];
@@ -933,7 +926,8 @@
         `<button class="step" type="button" data-target="${id}" data-delta="1">+</button>` +
         `</span></div>`;
     }).join('');
-    return `<section class="card pipe"><div class="card-head"><span class="dot"></span>` +
+    const order = PIPELINE_DISPLAY.indexOf(card.key) + 1;
+    return `<section class="card pipe" style="order:${order}"><div class="card-head"><span class="dot"></span>` +
       `<span class="card-title">${card.title}</span></div>${rows}</section>`;
   }).join('');
 
