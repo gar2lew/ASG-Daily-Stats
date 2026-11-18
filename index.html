@@ -203,6 +203,13 @@
     font-size:13px;
   }
 
+  #gateAuthCard[hidden],#repCard[hidden]{display:none}
+  #gateAuthForm{width:100%;display:grid;gap:12px}
+  #gateAuthForm .gate-auth-button{min-height:48px;border:0;border-radius:10px;background:var(--gold2);color:var(--navy);font:700 15px 'IBM Plex Sans',sans-serif;cursor:pointer}
+  #gateAuthForm .gate-auth-button:disabled{opacity:.65;cursor:wait}
+  #gateAuthStatus{margin:0;color:#a93327;font-size:14px;line-height:1.45}
+  .gate-auth-caption{margin:0;color:var(--muted);font-size:14px;line-height:1.5}
+
   .grid{
     display:grid;
     grid-template-columns:1.12fr .88fr;
@@ -361,9 +368,9 @@
     display:flex;
     align-items:center;
     justify-content:center;
-    width:48px;
-    height:37px;
-    border-radius:10px;
+    width:60px;
+    height:48px;
+    border-radius:12px;
     background:var(--gold2);
     box-shadow:0 4px 12px -5px rgba(179,145,63,.8);
   }
@@ -376,14 +383,33 @@
     text-align:center;
     text-transform:uppercase;
     outline:none;
-    font:800 17px 'Archivo',sans-serif;
+    font:800 21px 'Archivo',sans-serif;
+  }
+
+  .section-note{margin-top:12px}
+
+  .note-toggle{
+    min-height:40px;
+    padding:8px 12px;
+    border:1px solid var(--line2);
+    border-radius:10px;
+    background:transparent;
+    color:var(--navy2);
+    cursor:pointer;
+    font:600 13px 'IBM Plex Sans',sans-serif;
+  }
+
+  .note-toggle:hover,
+  .note-toggle[aria-expanded="true"]{
+    border-color:var(--gold);
+    background:#fbf7ee;
   }
 
   .note-wrap{
     display:flex;
     align-items:center;
     gap:8px;
-    margin-top:12px;
+    margin-top:8px;
     padding:10px 14px;
     border:1.5px dashed var(--line2);
     border-radius:12px;
@@ -404,7 +430,20 @@
     background:transparent;
     color:var(--ink);
     outline:none;
-    font:400 13px 'IBM Plex Mono',monospace;
+    font:400 15px 'IBM Plex Sans',sans-serif;
+  }
+
+  .note-label{
+    display:block;
+    margin:0 0 6px 2px;
+    color:var(--muted);
+    font:600 12px 'IBM Plex Sans',sans-serif;
+  }
+
+  .note-input:focus-visible,
+  .note-toggle:focus-visible{
+    outline:3px solid color-mix(in srgb,var(--gold) 65%,white);
+    outline-offset:2px;
   }
 
   .preview{border-left:5px solid var(--gold)}
@@ -598,6 +637,7 @@
   .gate-copy{margin:20px 0 0;color:#3a4a63;font-size:17px;line-height:1.65}
   .gate-retry{width:100%;max-width:500px;min-height:50px;border-radius:13px;cursor:pointer;background:transparent;border:1px solid #b8924a;color:#8a6a2f;font:600 16px 'IBM Plex Sans',sans-serif}
   .gate-retry[hidden]{display:none}
+  .gate-start[hidden]{display:none}
   .gate-retry:focus-visible{outline:2px solid #b8924a;outline-offset:3px}
   @media (min-width:900px){
     .gate-edge{display:block}
@@ -677,9 +717,23 @@
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
         <span class="gate-line gate-line-r"></span>
       </div>
-      <p class="gate-copy">Select your name, then press Start to open today's tally.</p>
+      <p class="gate-copy">Verify your team access, select your name, then start today's tally.</p>
     </div>
-    <section class="card rep-card" style="--d:.02s">
+    <section class="card rep-card" id="gateAuthCard" aria-labelledby="gateAuthTitle">
+      <span class="rep-icon" aria-hidden="true">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#f5f1e8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
+      </span>
+      <div class="rep-field">
+        <label id="gateAuthTitle" for="gatePasscode">Team Passcode</label>
+        <form id="gateAuthForm">
+          <input id="gatePasscode" type="password" autocomplete="current-password" placeholder="Enter your team passcode" required>
+          <p class="gate-auth-caption">Used to securely load the ASG rep list.</p>
+          <button type="submit" id="gateAuthButton" class="gate-auth-button">Verify access</button>
+          <p id="gateAuthStatus" role="status" aria-live="polite"></p>
+        </form>
+      </div>
+    </section>
+    <section class="card rep-card" id="repCard" style="--d:.02s" hidden>
       <span class="rep-icon" aria-hidden="true">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#f5f1e8" stroke-width="2" stroke-linecap="round">
           <circle cx="12" cy="8" r="4"></circle>
@@ -778,6 +832,10 @@
             <button class="step" type="button" data-target="valueS" data-delta="1">+</button>
           </span>
         </div>
+        <div class="section-note">
+          <button class="note-toggle" type="button" data-note-toggle="tallyNote" aria-controls="tallyNote-wrap" aria-expanded="false">Add a note</button>
+          <div id="tallyNote-wrap" hidden><label class="note-label" for="tallyNote">Tally note</label><div class="note-wrap"><input class="note-input" id="tallyNote" type="text" placeholder="Add a note about today's tally"></div></div>
+        </div>
       </section>
 
       <div id="pipelines"></div>
@@ -794,6 +852,10 @@
         <div class="row"><span class="row-label">First Consult Calls</span><span class="step-group"><button class="step" type="button" data-target="firstConsultCalls" data-delta="-1">−</button><input class="num" id="firstConsultCalls" type="number" min="0" max="9999" step="1" value="0"><button class="step" type="button" data-target="firstConsultCalls" data-delta="1">+</button></span></div>
         <div class="row"><span class="row-label">Finance Run Calls</span><span class="step-group"><button class="step" type="button" data-target="financeRunCalls" data-delta="-1">−</button><input class="num" id="financeRunCalls" type="number" min="0" max="9999" step="1" value="0"><button class="step" type="button" data-target="financeRunCalls" data-delta="1">+</button></span></div>
         <div class="row"><span class="row-label">Coffee Run Calls</span><span class="step-group"><button class="step" type="button" data-target="coffeeRunCalls" data-delta="-1">−</button><input class="num" id="coffeeRunCalls" type="number" min="0" max="9999" step="1" value="0"><button class="step" type="button" data-target="coffeeRunCalls" data-delta="1">+</button></span></div>
+        <div class="section-note">
+          <button class="note-toggle" type="button" data-note-toggle="callsNote" aria-controls="callsNote-wrap" aria-expanded="false">Add a note</button>
+          <div id="callsNote-wrap" hidden><label class="note-label" for="callsNote">Calls note</label><div class="note-wrap"><input class="note-input" id="callsNote" type="text" placeholder="Add a note about calls"></div></div>
+        </div>
       </section>
 
       <section class="card fc" style="--d:.15s">
@@ -830,10 +892,9 @@
           </span>
         </div>
 
-        <div class="note-wrap">
-          <span class="paren">(</span>
-          <input class="note-input" id="fcNote" type="text" placeholder="e.g. 5 are FIFO, so callbacks">
-          <span class="paren">)</span>
+        <div class="section-note">
+          <button class="note-toggle" type="button" data-note-toggle="fcNote" aria-controls="fcNote-wrap" aria-expanded="false">Add a note</button>
+          <div id="fcNote-wrap" hidden><label class="note-label" for="fcNote">Follow Up FC's note</label><div class="note-wrap"><input class="note-input" id="fcNote" type="text" placeholder="e.g. 5 are FIFO, so callbacks"></div></div>
         </div>
       </section>
 
@@ -869,6 +930,10 @@
             <input class="num" id="recBooked" type="number" min="0" max="9999" step="1" value="0">
             <button class="step" type="button" data-target="recBooked" data-delta="1">+</button>
           </span>
+        </div>
+        <div class="section-note">
+          <button class="note-toggle" type="button" data-note-toggle="recNote" aria-controls="recNote-wrap" aria-expanded="false">Add a note</button>
+          <div id="recNote-wrap" hidden><label class="note-label" for="recNote">Recruitment note</label><div class="note-wrap"><input class="note-input" id="recNote" type="text" placeholder="Add a note about recruitment"></div></div>
         </div>
       </section>
       </div>
@@ -925,7 +990,7 @@
     'labelP','valueP',
     'labelS','valueS',
     'leadCalls','firstConsultCalls','financeRunCalls','coffeeRunCalls',
-    'fcCalls','fcSpoke','fcBooked','fcNote',
+    'fcCalls','fcSpoke','fcBooked',
     'recCalls','recSpoke','recBooked'
   ];
 
@@ -952,6 +1017,12 @@
   const PIPELINE_DISPLAY = ['fcPipe','financePipe','property','smsf','contract','recPipe'];
 
   const pipelineInputId = (card, field) => `pipe_${card}_${field}`;  // matches pipelineKey() in lib/draps.js
+  const noteIds = ['tallyNote','callsNote','fcNote','recNote'];
+  const noteMarkup = (id, title, placeholder) =>
+    `<div class="section-note">` +
+    `<button class="note-toggle" type="button" data-note-toggle="${id}" aria-controls="${id}-wrap" aria-expanded="false">Add a note</button>` +
+    `<div id="${id}-wrap" hidden><label class="note-label" for="${id}">${title} note</label>` +
+    `<div class="note-wrap"><input class="note-input" id="${id}" type="text" placeholder="${placeholder}"></div></div></div>`;
 
   const pipelineIds = [];
   document.getElementById('pipelines').innerHTML = PIPELINE_DISPLAY.map(key => PIPELINES.find(card => card.key === key)).map(card => {
@@ -964,11 +1035,14 @@
         `<button class="step" type="button" data-target="${id}" data-delta="1">+</button>` +
         `</span></div>`;
     }).join('');
+    const noteId = `pipe_${card.key}_note`;
+    noteIds.push(noteId);
     return `<section class="card pipe"><div class="card-head"><span class="dot"></span>` +
-      `<span class="card-title">${card.title}</span></div>${rows}</section>`;
+      `<span class="card-title">${card.title}</span></div>${rows}${noteMarkup(noteId,card.title,`Add a note about ${card.title.toLowerCase()}`)}</section>`;
   }).join('');
 
   fieldIds.push(...pipelineIds);
+  fieldIds.push(...noteIds);
   numberIds.push(...pipelineIds);
 
   const byId = id => document.getElementById(id);
@@ -1021,24 +1095,29 @@
       return `${label}-${numberValue(valueId)}`;
     }).join('\n');
 
-    const noteText = byId('fcNote').value.trim();
-    const note = noteText ? ` (${noteText})` : '';
+    const noteLine = id => {
+      const noteText = byId(id).value.trim();
+      return noteText ? `\nNote - ${noteText}` : '';
+    };
+    const followUpNote = byId('fcNote').value.trim();
+    const followUpNoteSuffix = followUpNote ? ` (${followUpNote})` : '';
 
     return heading +
-      `${labels}\n\n` +
+      `${labels}${noteLine('tallyNote')}\n\n` +
       `Calls\n` +
       `Lead Calls - ${numberValue('leadCalls')}\n` +
       `First Consult Calls - ${numberValue('firstConsultCalls')}\n` +
       `Finance Run Calls - ${numberValue('financeRunCalls')}\n` +
-      `Coffee Run Calls - ${numberValue('coffeeRunCalls')}\n\n` +
+      `Coffee Run Calls - ${numberValue('coffeeRunCalls')}${noteLine('callsNote')}\n\n` +
       `Follow Up FC's - ${numberValue('fcCalls')}\n` +
-      `Spoke To - ${numberValue('fcSpoke')}${note}\n` +
+      `Spoke To - ${numberValue('fcSpoke')}${followUpNoteSuffix}\n` +
       `Booked - ${numberValue('fcBooked')}\n\n` +
       `Recruitment - ${numberValue('recCalls')}\n` +
       `Spoke To - ${numberValue('recSpoke')}\n` +
-      `Booked - ${numberValue('recBooked')}` +
+      `Booked - ${numberValue('recBooked')}${noteLine('recNote')}` +
       PIPELINES.map(card => `\n\n${card.title}\n` +
-        card.fields.map(([field,label]) => `${label} - ${numberValue(pipelineInputId(card.key,field))}`).join('\n')
+        card.fields.map(([field,label]) => `${label} - ${numberValue(pipelineInputId(card.key,field))}`).join('\n') +
+        noteLine(`pipe_${card.key}_note`)
       ).join('');
   };
 
@@ -1109,8 +1188,28 @@
     });
   });
 
-  ['repName','fcNote'].forEach(id => {
+  ['repName',...noteIds].forEach(id => {
     byId(id).addEventListener('input',update);
+  });
+
+  document.querySelectorAll('[data-note-toggle]').forEach(button => {
+    const input = byId(button.dataset.noteToggle);
+    const panel = byId(button.getAttribute('aria-controls'));
+    const sync = () => {
+      panel.hidden = button.getAttribute('aria-expanded') !== 'true';
+      button.textContent = input.value.trim() ? 'Edit note' : (panel.hidden ? 'Add a note' : 'Hide note');
+    };
+    if(input.value.trim()) button.setAttribute('aria-expanded','true');
+    sync();
+    button.addEventListener('click',() => {
+      button.setAttribute('aria-expanded',String(button.getAttribute('aria-expanded') !== 'true'));
+      sync();
+      if(!panel.hidden) input.focus();
+    });
+    input.addEventListener('input',() => {
+      sync();
+      update();
+    });
   });
 
   document.querySelectorAll('.step').forEach(button => {
@@ -1137,13 +1236,19 @@
   });
 
   byId('resetBtn').addEventListener('click',() => {
-    if(!window.confirm('Start a new day? All numbers and the note will reset to 0. The rep name and tally labels will be kept.')) return;
+    if(!window.confirm('Start a new day? All numbers and notes will be cleared. The rep name and tally labels will be kept.')) return;
 
     numberIds.forEach(id => {
       byId(id).value = '0';
     });
 
-    byId('fcNote').value = '';
+    noteIds.forEach(id => {
+      byId(id).value = '';
+      const button = document.querySelector(`[data-note-toggle="${id}"]`);
+      button.setAttribute('aria-expanded','false');
+      button.textContent = 'Add a note';
+      byId(button.getAttribute('aria-controls')).hidden = true;
+    });
     update();
   });
 
@@ -1209,33 +1314,23 @@
   const clearPasscode = () => {
     try { localStorage.removeItem(PASSCODE_KEY); } catch { /* ignore */ }
   };
-  const askPasscode = () => {
-    const entered = (window.prompt('Enter the DRAPS passcode:') || '').trim();
-    if (entered) savePasscode(entered);
-    return entered;
-  };
-
   const sendRequest = (path,method,body,passcode) => fetch(path,{
     method,
     headers:{'Content-Type':'application/json','x-draps-passcode':passcode},
     body: method === 'GET' ? undefined : JSON.stringify(body)
   });
 
-  const requestJson = async (path,method,body) => {
-    let passcode = readPasscode() || askPasscode();
-    if (!passcode) throw new Error('A passcode is required');
-    let response = await sendRequest(path,method,body,passcode);
-
-    if (response.status === 401) {
-      clearPasscode();
-      passcode = askPasscode();
-      if (!passcode) throw new Error('A passcode is required');
-      response = await sendRequest(path,method,body,passcode);
-      if (response.status === 401) clearPasscode();
-    }
-
+  const requestJson = async (path,method,body,providedPasscode = '') => {
+    const passcode = providedPasscode || readPasscode();
+    if (!passcode) throw new Error('Enter the team passcode on the welcome screen.');
+    const response = await sendRequest(path,method,body,passcode);
     const result = await response.json().catch(() => ({ok:false,error:`Server returned ${response.status}`}));
-    if(!response.ok || !result.ok) throw new Error(result.error || 'Request failed');
+    if(response.status === 401) clearPasscode();
+    if(!response.ok || !result.ok){
+      const error = new Error(result.error || 'Request failed');
+      error.status = response.status;
+      throw error;
+    }
     return result;
   };
 
@@ -1270,6 +1365,7 @@
       const result = await postJson(API_PUBLISH,{record});
       setStatus(`Published ${record.rep} · ${record.date} (${result.mode}).`,'success');
     }catch(error){
+      if(error.status === 401) requestGatePasscode('Your access needs to be verified again. Enter the team passcode to continue.');
       setStatus(`Publish failed: ${error.message}`,'error');
     }finally{
       setBusy(button,false,'Publish Results');
@@ -1290,6 +1386,7 @@
       await postJson(API_EMAIL,{subject,body:buildReport()});
       setStatus(`Sent: ${subject}`,'success');
     }catch(error){
+      if(error.status === 401) requestGatePasscode('Your access needs to be verified again. Enter the team passcode to continue.');
       setStatus(`Send failed: ${error.message}`,'error');
     }finally{
       setBusy(button,false,'Send to Management');
@@ -1326,6 +1423,8 @@
   };
 
   const updateStartButton = () => {
+    const accessVerified = !byId('repCard').hidden;
+    byId('gateStartBtn').hidden = !accessVerified;
     byId('gateStartBtn').disabled = !repList.some(r => r.name === byId('repName').value);
   };
 
@@ -1334,28 +1433,72 @@
     byId('changeRepBtn').hidden = view !== 'tally';
   };
 
-  const loadReps = async () => {
+  const setGateAccess = (verified,message = '') => {
+    byId('gateAuthCard').hidden = verified;
+    byId('repCard').hidden = !verified;
+    byId('gateAuthStatus').textContent = message;
+    byId('gateStatus').textContent = '';
+    byId('gateRetryBtn').hidden = true;
+    if(verified) byId('gatePasscode').value = '';
+    updateStartButton();
+  };
+
+  const requestGatePasscode = message => {
+    showView('gate');
+    setGateAccess(false,message);
+    byId('gatePasscode').value = '';
+    byId('gateAuthButton').textContent = 'Verify access';
+    byId('gateAuthButton').disabled = false;
+  };
+
+  const loadReps = async (passcode = readPasscode()) => {
     const retry = byId('gateRetryBtn');
+    if (!passcode) {
+      setGateAccess(false);
+      return false;
+    }
     try {
-      const result = await requestJson(API_REPS,'GET');
+      const result = await requestJson(API_REPS,'GET',undefined,passcode);
+      savePasscode(passcode);
       repList = result.reps;
       setRepOptions(readRepName());
       updateDateChip();
-      byId('gateStatus').textContent = '';
-      retry.hidden = true;
+      setGateAccess(true);
+      return true;
     } catch (error) {
       byId('repName').innerHTML = '<option value="">Could not load names</option>';
-      setStatus(`Could not load rep names: ${error.message}`,'error');
-      byId('gateStatus').textContent = `Could not load rep names: ${error.message}`;
-      retry.hidden = false;
+      if (error.status === 401) {
+        requestGatePasscode('That passcode was not accepted. Check it and try again.');
+      } else {
+        setGateAccess(false,`Could not connect to the ASG rep list: ${error.message}`);
+        retry.hidden = false;
+      }
+      return false;
+    } finally {
+      update();
     }
-    update();
   };
+
+  byId('gateAuthForm').addEventListener('submit',async event => {
+    event.preventDefault();
+    const button = byId('gateAuthButton');
+    const passcode = byId('gatePasscode').value.trim();
+    if(!passcode) return;
+    button.disabled = true;
+    button.textContent = 'Checking access…';
+    byId('gateAuthStatus').textContent = '';
+    const loaded = await loadReps(passcode);
+    if(!loaded && !byId('gateAuthStatus').textContent){
+      byId('gateAuthStatus').textContent = 'Could not verify access. Try again.';
+    }
+    button.disabled = false;
+    button.textContent = 'Verify access';
+  });
 
   byId('gateRetryBtn').addEventListener('click',() => {
     byId('gateRetryBtn').hidden = true;
-    byId('gateStatus').textContent = 'Loading names…';
-    loadReps();
+    byId('gateAuthStatus').textContent = 'Connecting to the ASG rep list…';
+    loadReps(readPasscode());
   });
 
   byId('repAddBtn').addEventListener('click',() => {
@@ -1383,6 +1526,10 @@
       status.textContent = '';
       update();
     } catch (error) {
+      if(error.status === 401){
+        requestGatePasscode('Your access needs to be verified again. Enter the team passcode to continue.');
+        return;
+      }
       status.textContent = error.message;
     }
   });
@@ -1407,9 +1554,18 @@
 
   showView('gate');
 
-  loadReps();
+  if(readPasscode()) loadReps();
+  else setGateAccess(false);
 
   load();
+  noteIds.forEach(id => {
+    const input = byId(id);
+    if(!input.value.trim()) return;
+    const button = document.querySelector(`[data-note-toggle="${id}"]`);
+    button.setAttribute('aria-expanded','true');
+    button.textContent = 'Edit note';
+    byId(button.getAttribute('aria-controls')).hidden = false;
+  });
   numberIds.forEach(id => cleanNumberInput(byId(id)));
   render();
 })();
