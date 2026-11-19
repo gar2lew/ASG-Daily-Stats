@@ -1,5 +1,6 @@
 import nodemailer from 'nodemailer';
 import { assertEnv, checkPasscode } from '../lib/draps.js';
+import { buildEmailHtml } from '../lib/email-format.js';
 
 // Subject must be exactly: DRAPS - Rep Name - Day - DD/MM/YYYY
 const SUBJECT_PATTERN = /^DRAPS - [^\r\n]{1,120} - (Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday) - \d{2}\/\d{2}\/\d{4}$/;
@@ -36,6 +37,7 @@ export default async function handler(req, res) {
       to: recipients,
       subject,
       text: body,
+      html: buildEmailHtml(subject, body),
     });
 
     return res.status(200).json({ ok: true });
