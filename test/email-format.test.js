@@ -18,6 +18,14 @@ test('formats a DRAPS email into a clear, Outlook-friendly report', () => {
   assert.match(html, /role="presentation"/);
 });
 
+test('uses the shared ASG navy and gold brand colours', () => {
+  const html = buildEmailHtml(SUBJECT, BODY);
+
+  assert.match(html, /background:#0a1f3d/);
+  assert.match(html, /border-bottom:4px solid #c9a45c/);
+  assert.doesNotMatch(html, /#173f35|#52665e|#34443d|#dce6e1|#e7ece9/i);
+});
+
 test('escapes subject and report text before adding HTML markup', () => {
   const html = buildEmailHtml('<img src=x onerror=alert(1)>', 'Rep <script>alert(1)</script>\n\nCalls\nNote - <b>unsafe</b>');
 
