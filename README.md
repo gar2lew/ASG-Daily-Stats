@@ -18,6 +18,7 @@ Vercel-hosted DRAPS daily stats app: `index.html` plus two serverless routes.
 | `GMAIL_USER` | Gmail address that sends the email |
 | `GMAIL_APP_PASSWORD` | Gmail app password (requires 2-Step Verification) |
 | `MANAGEMENT_RECIPIENTS` | Comma-separated list of management email addresses |
+| `ADMIN_PIN` | 4-digit PIN for the Admin button on the page. Only the owner should know it. Wrong PINs lock that device out for 15 minutes after 5 tries. |
 | `DRAPS_PASSCODE` | Passcode the page asks for once per device. Both API routes reject requests without it. |
 
 Share both spreadsheets with the service account's email address as Editor.
@@ -45,6 +46,14 @@ Reps are kept on a `Reps` tab in the same spreadsheet as `DRAPS Log`, with colum
 The page opens on a gate screen titled **Daily DRAPS Input**. The rep chooses their name (or adds it), then presses **Start** to open the tally. **Change rep** returns to the gate without clearing any figures. The date on the tally follows the chosen rep's timezone.
 
 To check the gate locally without the Google env vars, run `node test/e2e-server.mjs` and open `http://localhost:4173`. This server stubs `/api/reps`, `/api/publish` and `/api/email`. It is for testing only and is not deployed.
+
+## Rep admin
+
+The **Admin** button in the page header asks for `ADMIN_PIN` each time it is opened. From the panel you can rename a rep, change their state, add a rep, or remove a rep. Removing a rep only hides them from the gate; their row and past figures stay on the sheet, and **Restore** shows them again.
+
+Renaming a rep does not change names already written to the DRAPS Log or the weekly sheets, so past figures under the old name stay as they were.
+
+The lockout is kept in memory on each server instance, so it slows guessing but does not stop it completely.
 
 ## Staff portal
 

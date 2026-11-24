@@ -1,0 +1,11 @@
+{
+  "remoteName": "origin",
+  "projects": [
+    {
+      "id": "prj_BLNtypgvDcTmVHElhbAZUfHtjpJs",
+      "name": "asg-daily-stats",
+      "directory": ".",
+      "orgId": "team_Cz7AAMQl8LuozNIPW9fggK94"
+    }
+  ]
+}

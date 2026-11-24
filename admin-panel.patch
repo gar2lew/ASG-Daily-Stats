@@ -1,0 +1,681 @@
+diff --git a/README.md b/README.md
+index 5816d71..0e365bb 100644
+--- a/README.md
++++ b/README.md
+@@ -18,6 +18,7 @@ Vercel-hosted DRAPS daily stats app: `index.html` plus two serverless routes.
+ | `GMAIL_USER` | Gmail address that sends the email |
+ | `GMAIL_APP_PASSWORD` | Gmail app password (requires 2-Step Verification) |
+ | `MANAGEMENT_RECIPIENTS` | Comma-separated list of management email addresses |
++| `ADMIN_PIN` | 4-digit PIN for the Admin button on the page. Only the owner should know it. Wrong PINs lock that device out for 15 minutes after 5 tries. |
+ | `DRAPS_PASSCODE` | Passcode the page asks for once per device. Both API routes reject requests without it. |
+ 
+ Share both spreadsheets with the service account's email address as Editor.
+@@ -46,6 +47,14 @@ The page opens on a gate screen titled **Daily DRAPS Input**. The rep chooses th
+ 
+ To check the gate locally without the Google env vars, run `node test/e2e-server.mjs` and open `http://localhost:4173`. This server stubs `/api/reps`, `/api/publish` and `/api/email`. It is for testing only and is not deployed.
+ 
++## Rep admin
++
++The **Admin** button in the page header asks for `ADMIN_PIN` each time it is opened. From the panel you can rename a rep, change their state, add a rep, or remove a rep. Removing a rep only hides them from the gate; their row and past figures stay on the sheet, and **Restore** shows them again.
++
++Renaming a rep does not change names already written to the DRAPS Log or the weekly sheets, so past figures under the old name stay as they were.
++
++The lockout is kept in memory on each server instance, so it slows guessing but does not stop it completely.
++
+ ## Staff portal
+ 
+ `portal.html` is a static hub page with the same look as the daily gate. It lists internal apps so staff do not have to hunt for links. To add or change an app, edit the `APPS` array near the bottom of `portal.html` (each entry needs `name`, `description` and an `https://` or `/` `url`). The page has no API calls and no passcode; each linked app keeps its own sign-in. `test/portal.test.js` checks the list.
+diff --git a/api/admin.js b/api/admin.js
+new file mode 100644
+index 0000000..f06bee6
+--- /dev/null
++++ b/api/admin.js
+@@ -0,0 +1,83 @@
++import { assertEnv } from '../lib/draps.js';
++import { checkAdminPin } from '../lib/admin.js';
++import { validateRepInput, localDateParts } from '../lib/reps.js';
++import { listAllReps, addRep, saveRep, setRepActive } from '../lib/reps-store.js';
++import { getSheetsClient } from '../lib/sheets.js';
++
++const defaultDeps = {
++  getSheets: getSheetsClient,
++  spreadsheetId: () => process.env.SHEET_ID,
++  today: () => localDateParts('Australia/Brisbane').date,
++  checkPin: checkAdminPin,
++  store: { listAllReps, addRep, saveRep, setRepActive },
++};
++
++const publicRep = rep => ({ row: rep.row, name: rep.name, state: rep.state, timezone: rep.timezone, active: rep.active });
++
++// Every request sends the admin PIN in the x-admin-pin header.
++// GET  /api/admin                          -> { ok, reps: [{ row, name, state, timezone, active }] }
++// POST /api/admin { action, ... }          -> { ok, rep }
++//   action 'add'     { name, state }        adds a rep, or shows a removed rep again with the new details
++//   action 'update'  { row, name, state }   renames a rep or changes their state
++//   action 'remove'  { row }                hides a rep from the gate (the row and its history stay)
++//   action 'restore' { row }                shows a removed rep again
++export async function handleAdmin(req, res, deps = defaultDeps) {
++  const pin = deps.checkPin(req);
++  if (!pin.ok) return res.status(pin.status).json({ ok: false, error: pin.error });
++
++  try {
++    assertEnv(['GOOGLE_SERVICE_ACCOUNT_JSON', 'SHEET_ID']);
++    const sheets = deps.getSheets();
++    const id = deps.spreadsheetId();
++
++    if (req.method === 'GET') {
++      const reps = await deps.store.listAllReps(sheets, id);
++      return res.status(200).json({ ok: true, reps: reps.map(publicRep) });
++    }
++
++    if (req.method !== 'POST') return res.status(405).json({ ok: false, error: 'Method not allowed' });
++
++    const body = req.body || {};
++    const row = Number.parseInt(body.row, 10);
++    const needsRow = () => {
++      if (!Number.isInteger(row) || row < 2) throw Object.assign(new Error('Choose a rep first'), { status: 400 });
++    };
++
++    if (body.action === 'add') {
++      const checked = validateRepInput(body);
++      if (!checked.ok) return res.status(400).json({ ok: false, error: checked.error });
++
++      const existing = (await deps.store.listAllReps(sheets, id))
++        .find(rep => rep.name.toLowerCase() === checked.name.toLowerCase());
++      if (existing) {
++        await deps.store.saveRep(sheets, id, { row: existing.row, name: checked.name, state: checked.state });
++        const rep = await deps.store.setRepActive(sheets, id, { row: existing.row, active: true });
++        return res.status(200).json({ ok: true, rep: publicRep(rep) });
++      }
++      const result = await deps.store.addRep(sheets, id, body, deps.today());
++      return res.status(200).json({ ok: true, rep: publicRep({ ...result.rep, row: null, active: true }) });
++    }
++
++    if (body.action === 'update') {
++      needsRow();
++      const rep = await deps.store.saveRep(sheets, id, { row, name: body.name, state: body.state });
++      return res.status(200).json({ ok: true, rep: publicRep(rep) });
++    }
++
++    if (body.action === 'remove' || body.action === 'restore') {
++      needsRow();
++      const rep = await deps.store.setRepActive(sheets, id, { row, active: body.action === 'restore' });
++      return res.status(200).json({ ok: true, rep: publicRep(rep) });
++    }
++
++    return res.status(400).json({ ok: false, error: 'Unknown action' });
++  } catch (error) {
++    if (error.status && error.status < 500) return res.status(error.status).json({ ok: false, error: error.message });
++    console.error('admin failed', error);
++    return res.status(500).json({ ok: false, error: 'Could not update the rep list. Check the server logs.' });
++  }
++}
++
++export default function handler(req, res) {
++  return handleAdmin(req, res);
++}
+diff --git a/index.html b/index.html
+index 0cadeec..1c80e72 100644
+--- a/index.html
++++ b/index.html
+@@ -684,6 +684,44 @@
+     .gate-panel .rep-card{padding:16px;gap:12px}
+     .gate-panel .rep-field select,.gate-panel .rep-field input{font-size:16px}
+   }
++
++  /* Admin panel */
++  .modal[hidden]{display:none}
++  .modal{position:fixed;inset:0;z-index:50;background:rgba(14,26,47,.55);display:flex;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(3px)}
++  .modal-card{background:var(--card);border:1px solid var(--line);border-radius:18px;box-shadow:0 30px 80px -24px rgba(14,26,47,.45);width:min(760px,100%);max-height:calc(100vh - 40px);overflow:auto;padding:28px 30px}
++  .modal-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:18px;padding-bottom:16px;border-bottom:1px solid var(--line)}
++  .modal-head .eyebrow{font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--gold-deep);font-weight:700;margin-bottom:6px}
++  .modal-head h2{font:500 26px/1.15 Georgia,serif;color:var(--navy)}
++  .modal-close{background:none;border:0;font-size:28px;line-height:1;color:var(--muted);cursor:pointer;padding:4px 8px}
++  .modal-close:hover{color:var(--ink)}
++  .modal-lead{color:var(--muted);font-size:14px;line-height:1.55;margin-bottom:16px}
++  .modal-error{margin-top:12px;font-size:13.5px;color:#a33a2e;font-weight:600}
++  .modal-ok{margin-top:12px;font-size:13.5px;color:var(--green);font-weight:600}
++  .pin-row{display:flex;gap:12px;margin:18px 0 6px}
++  .pin-box{width:64px;height:72px;text-align:center;font:600 30px 'IBM Plex Sans',sans-serif;color:var(--navy);background:#fff;border:1px solid var(--line2);border-radius:12px;outline:none}
++  .pin-box:focus{border-color:var(--gold);box-shadow:0 0 0 3px rgba(179,145,63,.2)}
++  .table-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:12px;background:#fff}
++  .rep-table{width:100%;border-collapse:collapse;font-size:14px}
++  .rep-table th{text-align:left;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-weight:700;padding:12px 14px;background:var(--inset);border-bottom:1px solid var(--line)}
++  .rep-table td{padding:11px 14px;border-bottom:1px solid var(--line);vertical-align:middle;color:var(--ink)}
++  .rep-table tr:last-child td{border-bottom:0}
++  .rep-table td.name{font-weight:600}
++  .rep-table td.actions{text-align:right;white-space:nowrap}
++  .rep-table td.empty{text-align:center;color:var(--muted);padding:24px}
++  .rep-table input,.rep-table select,.add-fields input,.add-fields select{font:inherit;font-size:14px;padding:8px 10px;border:1px solid var(--line2);border-radius:8px;background:#fff;color:var(--ink);width:100%}
++  .pill{display:inline-block;font-size:11.5px;font-weight:700;padding:4px 10px;border-radius:99px;letter-spacing:.04em}
++  .pill.on{background:#e4f3ec;color:var(--green)}
++  .pill.off{background:#f1ece3;color:var(--muted)}
++  .btn-small{font:inherit;font-size:13px;font-weight:700;padding:7px 14px;border-radius:99px;border:1px solid var(--line2);background:#fff;color:var(--ink);cursor:pointer;margin-left:6px}
++  .btn-small:hover{border-color:var(--navy)}
++  .btn-small.primary{background:var(--navy);border-color:var(--navy);color:#fff}
++  .btn-small.danger{color:#a33a2e;border-color:#e6c2bb}
++  .add-rep{margin-top:22px}
++  .section-label{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--gold-deep);font-weight:700;margin-bottom:10px}
++  .add-fields{display:grid;grid-template-columns:1fr 120px auto;gap:10px;align-items:center}
++  .add-fields .btn{white-space:nowrap}
++  .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
++  @media (max-width:560px){.add-fields{grid-template-columns:1fr}.pin-box{width:52px;height:62px}.modal-card{padding:22px 20px}}
+ </style>
+ </head>
+ <body data-view="gate">
+@@ -773,10 +811,55 @@
+       <button class="btn gold" id="copyBtn" type="button">Copy Report</button>
+       <button class="btn ghost" id="resetBtn" type="button">New Day ⟲</button>
+       <button class="btn ghost" id="changeRepBtn" type="button" hidden>Change rep</button>
++      <button class="btn ghost" id="adminBtn" type="button">Admin</button>
+     </div>
+   </div>
+ </header>
+ 
++<div class="modal" id="adminModal" hidden>
++  <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="adminTitle">
++    <div class="modal-head">
++      <div>
++        <p class="eyebrow">Admin</p>
++        <h2 id="adminTitle">Rep list</h2>
++      </div>
++      <button class="modal-close" id="adminClose" type="button" aria-label="Close">&times;</button>
++    </div>
++
++    <div id="pinView">
++      <p class="modal-lead">Enter the 4-digit admin PIN to manage reps.</p>
++      <div class="pin-row" id="pinRow">
++        <input class="pin-box" type="password" inputmode="numeric" maxlength="1" autocomplete="off" aria-label="PIN digit 1">
++        <input class="pin-box" type="password" inputmode="numeric" maxlength="1" autocomplete="off" aria-label="PIN digit 2">
++        <input class="pin-box" type="password" inputmode="numeric" maxlength="1" autocomplete="off" aria-label="PIN digit 3">
++        <input class="pin-box" type="password" inputmode="numeric" maxlength="1" autocomplete="off" aria-label="PIN digit 4">
++      </div>
++      <p class="modal-error" id="pinError" hidden></p>
++    </div>
++
++    <div id="repView" hidden>
++      <p class="modal-lead">Edit names and states, add reps, or remove them from the gate. Removed reps keep their past figures.</p>
++      <div class="table-wrap">
++        <table class="rep-table">
++          <thead>
++            <tr><th>Name</th><th>State</th><th>Status</th><th><span class="sr">Actions</span></th></tr>
++          </thead>
++          <tbody id="repRows"></tbody>
++        </table>
++      </div>
++      <form class="add-rep" id="addRepForm" autocomplete="off">
++        <p class="section-label">Add a rep</p>
++        <div class="add-fields">
++          <input id="newRepName" type="text" maxlength="40" placeholder="Full name" aria-label="New rep name">
++          <select id="newRepState" aria-label="New rep state"><option value="NSW">NSW</option><option value="ACT">ACT</option><option value="VIC">VIC</option><option value="QLD">QLD</option><option value="SA">SA</option><option value="WA">WA</option><option value="TAS">TAS</option><option value="NT">NT</option></select>
++          <button class="btn dark" type="submit">Add rep</button>
++        </div>
++      </form>
++      <p class="modal-error" id="repMessage" hidden></p>
++    </div>
++  </div>
++</div>
++
+ <main class="app">
+ 
+   <div class="grid">
+@@ -1554,6 +1637,215 @@
+ 
+   showView('gate');
+ 
++  // ----- Admin panel. The PIN is held only while the panel is open. -----
++  const ADMIN_STATES = ['NSW','ACT','VIC','QLD','SA','WA','TAS','NT'];
++  const adminModal = byId('adminModal');
++  const pinBoxes = Array.from(document.querySelectorAll('.pin-box'));
++  let adminPin = '';
++  let adminReps = [];
++  let editingRow = null;
++
++  const pinValue = () => pinBoxes.map(box => box.value).join('');
++  const resetPinBoxes = () => { pinBoxes.forEach(box => { box.value = ''; }); };
++  const showPinError = message => { byId('pinError').textContent = message || ''; byId('pinError').hidden = !message; };
++  const showRepMessage = (message, isError) => {
++    const el = byId('repMessage');
++    el.textContent = message || '';
++    el.hidden = !message;
++    el.className = isError ? 'modal-error' : 'modal-ok';
++  };
++
++  const adminRequest = async (method, body) => {
++    const response = await fetch('/api/admin', {
++      method,
++      headers: {'Content-Type':'application/json','x-admin-pin': adminPin},
++      body: method === 'GET' ? undefined : JSON.stringify(body),
++    });
++    const result = await response.json().catch(() => ({ok:false,error:`Server returned ${response.status}`}));
++    if (!response.ok || !result.ok) {
++      const error = new Error(result.error || 'Request failed');
++      error.status = response.status;
++      throw error;
++    }
++    return result;
++  };
++
++  const openAdmin = () => {
++    adminPin = '';
++    adminReps = [];
++    editingRow = null;
++    resetPinBoxes();
++    showPinError('');
++    showRepMessage('', false);
++    byId('pinView').hidden = false;
++    byId('repView').hidden = true;
++    adminModal.hidden = false;
++    pinBoxes[0].focus();
++  };
++  const closeAdmin = () => {
++    adminPin = '';
++    adminReps = [];
++    editingRow = null;
++    resetPinBoxes();
++    adminModal.hidden = true;
++  };
++
++  const unlockAdmin = async () => {
++    const pin = pinValue();
++    if (!/^\d{4}$/.test(pin)) { showPinError('Enter all 4 digits.'); return; }
++    adminPin = pin;
++    try {
++      const result = await adminRequest('GET');
++      adminReps = result.reps;
++      showPinError('');
++      byId('pinView').hidden = true;
++      byId('repView').hidden = false;
++      renderAdminReps();
++    } catch (error) {
++      adminPin = '';
++      resetPinBoxes();
++      pinBoxes[0].focus();
++      showPinError(error.status === 401 ? 'That PIN was not accepted.' : error.message);
++    }
++  };
++
++  pinBoxes.forEach((box, i) => {
++    box.addEventListener('input', () => {
++      box.value = box.value.replace(/\D/g,'').slice(-1);
++      if (box.value && i < pinBoxes.length - 1) pinBoxes[i + 1].focus();
++      if (pinValue().length === 4) unlockAdmin();
++    });
++    box.addEventListener('keydown', e => {
++      if (e.key === 'Backspace' && !box.value && i > 0) pinBoxes[i - 1].focus();
++    });
++    box.addEventListener('paste', e => {
++      const digits = (e.clipboardData.getData('text') || '').replace(/\D/g,'').slice(0,4);
++      if (!digits) return;
++      e.preventDefault();
++      digits.split('').forEach((d, j) => { pinBoxes[j].value = d; });
++      pinBoxes[Math.min(digits.length, 3)].focus();
++      if (digits.length === 4) unlockAdmin();
++    });
++  });
++
++  const refreshAdminReps = async () => {
++    const result = await adminRequest('GET');
++    adminReps = result.reps;
++    editingRow = null;
++    renderAdminReps();
++  };
++
++  const makeButton = (label, className, onClick) => {
++    const button = document.createElement('button');
++    button.type = 'button';
++    button.className = className;
++    button.textContent = label;
++    button.addEventListener('click', onClick);
++    return button;
++  };
++  const makeCell = (text, className = '') => {
++    const cell = document.createElement('td');
++    if (className) cell.className = className;
++    cell.textContent = text;
++    return cell;
++  };
++
++  const runAdminAction = async (body, message) => {
++    showRepMessage('', false);
++    try {
++      await adminRequest('POST', body);
++      await refreshAdminReps();
++      showRepMessage(message, false);
++      return true;
++    } catch (error) {
++      if (error.status === 401) { closeAdmin(); return false; }
++      showRepMessage(error.message, true);
++      return false;
++    }
++  };
++
++  const removeRep = rep => {
++    if (!confirm(`Remove ${rep.name} from the rep list? Their past figures stay on the sheets.`)) return;
++    runAdminAction({action:'remove', row: rep.row}, `${rep.name} removed.`);
++  };
++  const restoreRep = rep => runAdminAction({action:'restore', row: rep.row}, `${rep.name} restored.`);
++
++  const editCells = rep => {
++    const nameInput = document.createElement('input');
++    nameInput.type = 'text';
++    nameInput.maxLength = 40;
++    nameInput.value = rep.name;
++    nameInput.setAttribute('aria-label', 'Name');
++    const stateSelect = document.createElement('select');
++    stateSelect.setAttribute('aria-label', 'State');
++    ADMIN_STATES.forEach(code => {
++      const option = document.createElement('option');
++      option.value = code;
++      option.textContent = code;
++      option.selected = code === rep.state;
++      stateSelect.append(option);
++    });
++    const nameCell = document.createElement('td');
++    nameCell.append(nameInput);
++    const stateCell = document.createElement('td');
++    stateCell.append(stateSelect);
++    const actions = document.createElement('td');
++    actions.className = 'actions';
++    actions.append(
++      makeButton('Save', 'btn-small primary', () => runAdminAction({action:'update', row: rep.row, name: nameInput.value, state: stateSelect.value}, 'Saved.')),
++      makeButton('Cancel', 'btn-small', () => { editingRow = null; renderAdminReps(); })
++    );
++    return [nameCell, stateCell, makeCell(rep.active ? 'Active' : 'Removed'), actions];
++  };
++
++  const renderAdminReps = () => {
++    const tbody = byId('repRows');
++    tbody.replaceChildren();
++    if (!adminReps.length) {
++      const row = document.createElement('tr');
++      const cell = makeCell('No reps yet. Add one below.', 'empty');
++      cell.colSpan = 4;
++      row.append(cell);
++      tbody.append(row);
++      return;
++    }
++    adminReps.forEach(rep => {
++      const row = document.createElement('tr');
++      if (editingRow === rep.row) {
++        row.append(...editCells(rep));
++      } else {
++        const status = document.createElement('td');
++        const pill = document.createElement('span');
++        pill.className = 'pill ' + (rep.active ? 'on' : 'off');
++        pill.textContent = rep.active ? 'Active' : 'Removed';
++        status.append(pill);
++        const actions = document.createElement('td');
++        actions.className = 'actions';
++        actions.append(
++          makeButton('Edit', 'btn-small', () => { editingRow = rep.row; renderAdminReps(); }),
++          rep.active
++            ? makeButton('Remove', 'btn-small danger', () => removeRep(rep))
++            : makeButton('Restore', 'btn-small', () => restoreRep(rep))
++        );
++        row.append(makeCell(rep.name, 'name'), makeCell(rep.state), status, actions);
++      }
++      tbody.append(row);
++    });
++  };
++
++  byId('adminBtn').addEventListener('click', openAdmin);
++  byId('adminClose').addEventListener('click', closeAdmin);
++  adminModal.addEventListener('click', e => { if (e.target === adminModal) closeAdmin(); });
++  document.addEventListener('keydown', e => { if (e.key === 'Escape' && !adminModal.hidden) closeAdmin(); });
++  byId('addRepForm').addEventListener('submit', e => {
++    e.preventDefault();
++    const name = byId('newRepName').value.trim();
++    if (!name) { showRepMessage('Enter a name for the new rep.', true); return; }
++    runAdminAction({action:'add', name, state: byId('newRepState').value}, `${name} added.`).then(ok => {
++      if (ok) byId('newRepName').value = '';
++    });
++  });
++
+   if(readPasscode()) loadReps();
+   else setGateAccess(false);
+ 
+diff --git a/lib/admin.js b/lib/admin.js
+new file mode 100644
+index 0000000..829a1de
+--- /dev/null
++++ b/lib/admin.js
+@@ -0,0 +1,47 @@
++// Admin PIN check for the rep admin panel. The PIN lives in the ADMIN_PIN env var, never in the page.
++import { createHash, timingSafeEqual } from 'node:crypto';
++
++export const PIN_PATTERN = /^\d{4}$/;
++export const MAX_FAILED_ATTEMPTS = 5;
++export const LOCK_MS = 15 * 60 * 1000;
++
++// Wrong attempts per client. Each serverless instance keeps its own count, so this slows
++// guessing but does not stop it completely. A 4-digit PIN relies on this limit.
++const failures = new Map(); // client key -> { count, lockedUntil }
++
++export function clientKey(req) {
++  const forwarded = req.headers['x-forwarded-for'];
++  if (typeof forwarded === 'string' && forwarded.trim()) return forwarded.split(',')[0].trim();
++  return req.socket?.remoteAddress || 'unknown';
++}
++
++// Returns { ok } or { ok: false, status, error }. Each request must send the PIN in x-admin-pin.
++export function checkAdminPin(req, { now = Date.now(), expected = process.env.ADMIN_PIN } = {}) {
++  if (!expected || !PIN_PATTERN.test(expected)) {
++    return { ok: false, status: 500, error: 'ADMIN_PIN must be set to a 4-digit number' };
++  }
++
++  const key = clientKey(req);
++  const state = failures.get(key);
++  if (state && state.lockedUntil > now) {
++    return { ok: false, status: 429, error: 'Too many wrong PIN attempts. Try again in 15 minutes.' };
++  }
++
++  const given = req.headers['x-admin-pin'];
++  const matches = typeof given === 'string' && PIN_PATTERN.test(given) && timingSafeEqual(
++    createHash('sha256').update(given).digest(),
++    createHash('sha256').update(expected).digest(),
++  );
++  if (matches) {
++    failures.delete(key);
++    return { ok: true };
++  }
++
++  const count = (state?.count || 0) + 1;
++  if (count >= MAX_FAILED_ATTEMPTS) {
++    failures.set(key, { count: 0, lockedUntil: now + LOCK_MS });
++  } else {
++    failures.set(key, { count, lockedUntil: 0 });
++  }
++  return { ok: false, status: 401, error: 'Incorrect PIN' };
++}
+diff --git a/lib/reps-store.js b/lib/reps-store.js
+index 9176ab4..c4cda36 100644
+--- a/lib/reps-store.js
++++ b/lib/reps-store.js
+@@ -81,3 +81,58 @@ export async function addRep(sheets, spreadsheetId, input, today) {
+     rep: { name: checked.name, state: checked.state, timezone: checked.timezone, active: true, added: today },
+   };
+ }
++
++// Every row for the admin panel, removed reps included. row is the sheet row number.
++export async function listAllReps(sheets, spreadsheetId) {
++  if (!(await tabExists(sheets, spreadsheetId))) return [];
++  const rows = await readRows(sheets, spreadsheetId);
++  return rows
++    .slice(1)
++    .map((row, i) => ({ row: i + 2, ...toRep(row) }))
++    .filter(rep => rep.name)
++    .sort((a, b) => a.name.localeCompare(b.name));
++}
++
++function httpError(message, status) {
++  const error = new Error(message);
++  error.status = status;
++  return error;
++}
++
++// Name, State and Timezone for one row. Refuses a name already used by another row.
++export async function saveRep(sheets, spreadsheetId, { row, name, state }) {
++  const checked = validateRepInput({ name, state });
++  if (!checked.ok) throw httpError(checked.error, 400);
++
++  const rows = await readRows(sheets, spreadsheetId);
++  const current = rows[row - 1];
++  if (!current || !(current[0] || '').trim()) throw httpError('That rep was not found', 404);
++
++  const key = checked.name.toLowerCase();
++  const clash = rows.slice(1).some((r, i) => i + 2 !== row && (r[0] || '').trim().toLowerCase() === key);
++  if (clash) throw httpError('Another rep already has that name', 409);
++
++  const active = (current[3] || '').trim().toUpperCase() !== 'FALSE';
++  await sheets.spreadsheets.values.update({
++    spreadsheetId,
++    range: `'${REPS_TAB}'!A${row}:D${row}`,
++    valueInputOption: 'RAW',
++    requestBody: { values: [[checked.name, checked.state, checked.timezone, active ? 'TRUE' : 'FALSE']] },
++  });
++  return { row, name: checked.name, state: checked.state, timezone: checked.timezone, active };
++}
++
++// Shows (active true) or hides (active false) a rep. The row and its history stay on the sheet.
++export async function setRepActive(sheets, spreadsheetId, { row, active }) {
++  const rows = await readRows(sheets, spreadsheetId);
++  const current = rows[row - 1];
++  if (!current || !(current[0] || '').trim()) throw httpError('That rep was not found', 404);
++
++  await sheets.spreadsheets.values.update({
++    spreadsheetId,
++    range: `'${REPS_TAB}'!D${row}`,
++    valueInputOption: 'RAW',
++    requestBody: { values: [[active ? 'TRUE' : 'FALSE']] },
++  });
++  return { ...toRep(current), row, active };
++}
+diff --git a/package.json b/package.json
+index 505a2f9..dceeb34 100644
+--- a/package.json
++++ b/package.json
+@@ -5,8 +5,8 @@
+   "type": "module",
+   "description": "ASG daily stats (DRAPS) web app with publish and management email routes",
+   "scripts": {
+-    "check": "node --check api/publish.js && node --check api/email.js && node --check api/reps.js && node --check lib/draps.js && node --check lib/email-format.js && node --check lib/reps.js && node --check lib/reps-store.js && node --check lib/sheets.js && node --check lib/approval.js",
+-    "test": "node --test test/reps.test.js test/reps-store.test.js test/reps-api.test.js test/e2e-server.test.js test/portal.test.js test/draps-record.test.js test/email-format.test.js test/approval.test.js"
++    "check": "node --check api/publish.js && node --check api/email.js && node --check api/reps.js && node --check lib/draps.js && node --check lib/email-format.js && node --check lib/reps.js && node --check lib/reps-store.js && node --check lib/sheets.js && node --check lib/approval.js && node --check api/admin.js && node --check lib/admin.js && node --check lib/reps-store.js",
++    "test": "node --test test/reps.test.js test/reps-store.test.js test/reps-api.test.js test/e2e-server.test.js test/portal.test.js test/draps-record.test.js test/email-format.test.js test/approval.test.js test/admin.test.js"
+   },
+   "engines": {
+     "node": ">=18"
+diff --git a/test/admin.test.js b/test/admin.test.js
+new file mode 100644
+index 0000000..d7c979b
+--- /dev/null
++++ b/test/admin.test.js
+@@ -0,0 +1,107 @@
++import { test } from 'node:test';
++import assert from 'node:assert/strict';
++import { checkAdminPin, MAX_FAILED_ATTEMPTS, LOCK_MS } from '../lib/admin.js';
++import { saveRep, setRepActive, listAllReps, REPS_TAB } from '../lib/reps-store.js';
++import { handleAdmin } from '../api/admin.js';
++
++const HEADER = ['Name', 'State', 'Timezone', 'Active', 'Added'];
++
++function fakeSheets(values) {
++  const calls = { update: [] };
++  return {
++    calls,
++    spreadsheets: {
++      get: async () => ({ data: { sheets: [{ properties: { title: REPS_TAB } }] } }),
++      values: {
++        get: async () => ({ data: { values } }),
++        update: async req => { calls.update.push(req); return {}; },
++      },
++    },
++  };
++}
++
++function fakeRes() {
++  return {
++    statusCode: 200, body: null,
++    status(code) { this.statusCode = code; return this; },
++    json(payload) { this.body = payload; return this; },
++  };
++}
++
++const req = (pin, extra = {}) => ({ headers: { 'x-admin-pin': pin, 'x-forwarded-for': '10.0.0.1' }, ...extra });
++
++test('checkAdminPin refuses when ADMIN_PIN is not a 4-digit number', () => {
++  assert.equal(checkAdminPin(req('1234'), { expected: undefined }).status, 500);
++  assert.equal(checkAdminPin(req('1234'), { expected: '12' }).status, 500);
++});
++
++test('checkAdminPin accepts the right PIN and rejects a wrong one', () => {
++  const now = Date.now();
++  assert.equal(checkAdminPin(req('4821'), { expected: '4821', now }).ok, true);
++  assert.equal(checkAdminPin(req('0000'), { expected: '4821', now: now + 1 }).status, 401);
++});
++
++test('checkAdminPin locks the client after repeated wrong PINs, then allows again', () => {
++  const start = 1_000_000;
++  const ip = { headers: { 'x-admin-pin': '0000', 'x-forwarded-for': '10.9.9.9' } };
++  for (let i = 0; i < MAX_FAILED_ATTEMPTS; i++) {
++    checkAdminPin(ip, { expected: '4821', now: start });
++  }
++  const locked = checkAdminPin({ headers: { 'x-admin-pin': '4821', 'x-forwarded-for': '10.9.9.9' } }, { expected: '4821', now: start + 1 });
++  assert.equal(locked.status, 429);
++  const after = checkAdminPin({ headers: { 'x-admin-pin': '4821', 'x-forwarded-for': '10.9.9.9' } }, { expected: '4821', now: start + LOCK_MS + 1 });
++  assert.equal(after.ok, true);
++});
++
++test('listAllReps includes removed reps with their sheet row numbers', async () => {
++  const sheets = fakeSheets([HEADER, ['Jaide', 'WA', 'Australia/Perth', 'TRUE', ''], ['Old Rep', 'NSW', 'Australia/Sydney', 'FALSE', '']]);
++  const reps = await listAllReps(sheets, 'id');
++  assert.deepEqual(reps.map(r => [r.name, r.row, r.active]), [['Jaide', 2, true], ['Old Rep', 3, false]]);
++});
++
++test('saveRep renames a row in place and keeps its active flag', async () => {
++  const sheets = fakeSheets([HEADER, ['Jaide', 'WA', 'Australia/Perth', 'TRUE', '16/11/2026']]);
++  const rep = await saveRep(sheets, 'id', { row: 2, name: 'Jaide Lee', state: 'qld' });
++  assert.equal(rep.timezone, 'Australia/Brisbane');
++  assert.deepEqual(sheets.calls.update[0].requestBody.values, [['Jaide Lee', 'QLD', 'Australia/Brisbane', 'TRUE']]);
++  assert.equal(sheets.calls.update[0].range, `'${REPS_TAB}'!A2:D2`);
++});
++
++test('saveRep refuses a name another row already uses', async () => {
++  const sheets = fakeSheets([HEADER, ['Jaide', 'WA', 'Australia/Perth', 'TRUE', ''], ['Mia', 'VIC', 'Australia/Melbourne', 'TRUE', '']]);
++  await assert.rejects(saveRep(sheets, 'id', { row: 3, name: 'jaide', state: 'VIC' }), { status: 409 });
++  assert.equal(sheets.calls.update.length, 0);
++});
++
++test('setRepActive only changes the Active cell', async () => {
++  const sheets = fakeSheets([HEADER, ['Mia', 'VIC', 'Australia/Melbourne', 'TRUE', '']]);
++  await setRepActive(sheets, 'id', { row: 2, active: false });
++  assert.equal(sheets.calls.update[0].range, `'${REPS_TAB}'!D2`);
++  assert.deepEqual(sheets.calls.update[0].requestBody.values, [['FALSE']]);
++});
++
++test('handleAdmin returns 401 without the right PIN and does not touch the sheet', async () => {
++  const res = fakeRes();
++  let touched = false;
++  await handleAdmin({ method: 'GET', headers: {} }, res, {
++    checkPin: () => ({ ok: false, status: 401, error: 'Incorrect PIN' }),
++    getSheets: () => { touched = true; return {}; },
++    spreadsheetId: () => 'id',
++    store: {},
++  });
++  assert.equal(res.statusCode, 401);
++  assert.equal(touched, false);
++});
++
++test('handleAdmin remove hides a rep and restore shows it again', async () => {
++  process.env.GOOGLE_SERVICE_ACCOUNT_JSON = '{}';
++  process.env.SHEET_ID = 'id';
++  const values = [HEADER, ['Mia', 'VIC', 'Australia/Melbourne', 'TRUE', '']];
++  const sheets = fakeSheets(values);
++  const deps = { checkPin: () => ({ ok: true }), getSheets: () => sheets, spreadsheetId: () => 'id', store: { listAllReps, saveRep, setRepActive, addRep: async () => ({}) }, today: () => '24/11/2026' };
++  const res = fakeRes();
++  await handleAdmin({ method: 'POST', headers: {}, body: { action: 'remove', row: 2 } }, res, deps);
++  assert.equal(res.statusCode, 200);
++  assert.equal(res.body.rep.active, false);
++  assert.equal(sheets.calls.update.at(-1).requestBody.values[0][0], 'FALSE');
++});
