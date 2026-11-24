@@ -722,6 +722,21 @@
   .add-fields .btn{white-space:nowrap}
   .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
   @media (max-width:560px){.add-fields{grid-template-columns:1fr}.pin-box{width:52px;height:62px}.modal-card{padding:22px 20px}}
+
+  /* Polish pass */
+  .step{width:44px;height:44px}
+  .row-label{font-size:13px}
+  .num.is-zero{color:#b7b0a1}
+  .report .rl-line{white-space:pre-wrap}
+  .report .rl-h{font-family:'Archivo',sans-serif;font-weight:800;color:var(--navy)}
+  .report .rl-gap{height:1.1em}
+  .copy-output{width:100%;margin-top:12px}
+  .note-list{margin-top:10px}
+  .note-row{display:flex;gap:8px;align-items:center;margin-top:6px}
+  .note-row .note-wrap{flex:1;margin-top:0}
+  .note-remove{width:32px;height:32px;flex:0 0 32px;border-radius:50%;border:1px solid var(--line2);background:#fff;color:var(--muted);cursor:pointer;font-size:18px;line-height:1}
+  .note-remove:hover{color:#a33a2e;border-color:#e6c2bb}
+  .muted-note{display:block;color:var(--muted);font-size:12px;margin-top:4px}
 </style>
 </head>
 <body data-view="gate">
@@ -915,10 +930,7 @@
             <button class="step" type="button" data-target="valueS" data-delta="1">+</button>
           </span>
         </div>
-        <div class="section-note">
-          <button class="note-toggle" type="button" data-note-toggle="tallyNote" aria-controls="tallyNote-wrap" aria-expanded="false">Add a note</button>
-          <div id="tallyNote-wrap" hidden><label class="note-label" for="tallyNote">Tally note</label><div class="note-wrap"><input class="note-input" id="tallyNote" type="text" placeholder="Add a note about today's tally"></div></div>
-        </div>
+        <div class="note-slot" data-group="tallyNote" data-label="Tally note" data-placeholder="Add a note about today's tally"></div>
       </section>
 
       <div id="pipelines"></div>
@@ -935,10 +947,7 @@
         <div class="row"><span class="row-label">First Consult Calls</span><span class="step-group"><button class="step" type="button" data-target="firstConsultCalls" data-delta="-1">−</button><input class="num" id="firstConsultCalls" type="number" min="0" max="9999" step="1" value="0"><button class="step" type="button" data-target="firstConsultCalls" data-delta="1">+</button></span></div>
         <div class="row"><span class="row-label">Finance Run Calls</span><span class="step-group"><button class="step" type="button" data-target="financeRunCalls" data-delta="-1">−</button><input class="num" id="financeRunCalls" type="number" min="0" max="9999" step="1" value="0"><button class="step" type="button" data-target="financeRunCalls" data-delta="1">+</button></span></div>
         <div class="row"><span class="row-label">Coffee Run Calls</span><span class="step-group"><button class="step" type="button" data-target="coffeeRunCalls" data-delta="-1">−</button><input class="num" id="coffeeRunCalls" type="number" min="0" max="9999" step="1" value="0"><button class="step" type="button" data-target="coffeeRunCalls" data-delta="1">+</button></span></div>
-        <div class="section-note">
-          <button class="note-toggle" type="button" data-note-toggle="callsNote" aria-controls="callsNote-wrap" aria-expanded="false">Add a note</button>
-          <div id="callsNote-wrap" hidden><label class="note-label" for="callsNote">Calls note</label><div class="note-wrap"><input class="note-input" id="callsNote" type="text" placeholder="Add a note about calls"></div></div>
-        </div>
+        <div class="note-slot" data-group="callsNote" data-label="Calls note" data-placeholder="Add a note about calls"></div>
       </section>
 
       <section class="card fc" style="--d:.15s">
@@ -975,10 +984,7 @@
           </span>
         </div>
 
-        <div class="section-note">
-          <button class="note-toggle" type="button" data-note-toggle="fcNote" aria-controls="fcNote-wrap" aria-expanded="false">Add a note</button>
-          <div id="fcNote-wrap" hidden><label class="note-label" for="fcNote">Follow Up FC's note</label><div class="note-wrap"><input class="note-input" id="fcNote" type="text" placeholder="e.g. 5 are FIFO, so callbacks"></div></div>
-        </div>
+        <div class="note-slot" data-group="fcNote" data-label="Follow Up FC's note" data-placeholder="e.g. 5 are FIFO, so callbacks"></div>
       </section>
 
       <section class="card rec" style="--d:.2s">
@@ -1014,10 +1020,7 @@
             <button class="step" type="button" data-target="recBooked" data-delta="1">+</button>
           </span>
         </div>
-        <div class="section-note">
-          <button class="note-toggle" type="button" data-note-toggle="recNote" aria-controls="recNote-wrap" aria-expanded="false">Add a note</button>
-          <div id="recNote-wrap" hidden><label class="note-label" for="recNote">Recruitment note</label><div class="note-wrap"><input class="note-input" id="recNote" type="text" placeholder="Add a note about recruitment"></div></div>
-        </div>
+        <div class="note-slot" data-group="recNote" data-label="Recruitment note" data-placeholder="Add a note about recruitment"></div>
       </section>
       </div>
     </div>
@@ -1032,6 +1035,7 @@
         <div class="report" id="report"></div>
         <div class="hint">Copy and paste directly into WhatsApp. The same layout is used every day.</div>
       </section>
+      <button class="btn gold copy-output" id="copyOutputBtn" type="button">Copy to clipboard</button>
 
       <div class="stats">
         <div class="stat"><div class="v" id="totalDials">0</div><div class="l">Total Calls</div></div>
@@ -1048,7 +1052,7 @@
       <div class="action-status" id="actionStatus" role="status" aria-live="polite"></div>
     </div>
     <div class="action-buttons">
-      <button class="btn dark" id="publishBtn" type="button">Publish Results</button>
+      <button class="btn dark" id="publishBtn" type="button">Publish Stats</button>
       <button class="btn gold" id="emailBtn" type="button">Send to Management</button>
     </div>
   </section>
@@ -1101,11 +1105,85 @@
 
   const pipelineInputId = (card, field) => `pipe_${card}_${field}`;  // matches pipelineKey() in lib/draps.js
   const noteIds = ['tallyNote','callsNote','fcNote','recNote'];
+  // Each note section starts with one button. Typing in the last box opens another box,
+  // so any number of notes can be added. Empty boxes are left out of the output.
+  const groupEl = id => document.querySelector(`.note-slot[data-group="${id}"]`);
+  const groupInputs = id => Array.from(groupEl(id).querySelectorAll('.note-input'));
+  const notesOf = id => groupInputs(id).map(input => input.value.trim()).filter(Boolean);
+  const noteValues = () => Object.fromEntries(noteIds.map(id => [id, groupInputs(id).map(input => input.value)]));
+  const addNoteRow = (id, value = '') => {
+    const slot = groupEl(id);
+    const row = document.createElement('div');
+    row.className = 'note-row';
+    const wrap = document.createElement('div');
+    wrap.className = 'note-wrap';
+    const input = document.createElement('input');
+    input.className = 'note-input';
+    input.type = 'text';
+    input.dataset.group = id;
+    input.placeholder = slot.dataset.placeholder;
+    input.setAttribute('aria-label', slot.dataset.label);
+    input.value = value;
+    wrap.append(input);
+    const remove = document.createElement('button');
+    remove.type = 'button';
+    remove.className = 'note-remove';
+    remove.setAttribute('aria-label', 'Remove this note');
+    remove.textContent = '×';
+    remove.addEventListener('click', () => {
+      if (slot.querySelectorAll('.note-row').length === 1) input.value = '';
+      else row.remove();
+      update();
+    });
+    row.append(wrap, remove);
+    slot.querySelector('.note-list').append(row);
+    return input;
+  };
+  const clearNoteGroup = id => {
+    const slot = groupEl(id);
+    const rows = Array.from(slot.querySelectorAll('.note-row'));
+    rows.slice(1).forEach(row => row.remove());
+    if (rows[0]) rows[0].querySelector('.note-input').value = '';
+    else addNoteRow(id);
+    slot.querySelector('.note-list').hidden = true;
+    slot.querySelector('.note-toggle').hidden = false;
+  };
+  const buildNoteGroup = slot => {
+    const id = slot.dataset.group;
+    slot.classList.add('section-note');
+    const toggle = document.createElement('button');
+    toggle.type = 'button';
+    toggle.className = 'note-toggle';
+    toggle.dataset.noteToggle = id;
+    toggle.textContent = 'Add a note';
+    const list = document.createElement('div');
+    list.className = 'note-list';
+    const heading = document.createElement('span');
+    heading.className = 'note-label';
+    heading.textContent = slot.dataset.label;
+    list.append(heading);
+    slot.append(toggle, list);
+    clearNoteGroup(id);
+  };
+  const showNoteList = (id, focus) => {
+    const slot = groupEl(id);
+    slot.querySelector('.note-list').hidden = false;
+    slot.querySelector('.note-toggle').hidden = true;
+    if (focus) groupInputs(id).slice(-1)[0].focus();
+  };
+  const restoreNotes = values => {
+    noteIds.forEach(id => {
+      clearNoteGroup(id);
+      const saved = Array.isArray(values && values[id]) ? values[id].filter(v => String(v).trim() !== '') : [];
+      if (!saved.length) return;
+      groupInputs(id)[0].value = saved[0];
+      saved.slice(1).forEach(v => addNoteRow(id, v));
+      addNoteRow(id);
+      showNoteList(id, false);
+    });
+  };
   const noteMarkup = (id, title, placeholder) =>
-    `<div class="section-note">` +
-    `<button class="note-toggle" type="button" data-note-toggle="${id}" aria-controls="${id}-wrap" aria-expanded="false">Add a note</button>` +
-    `<div id="${id}-wrap" hidden><label class="note-label" for="${id}">${title} note</label>` +
-    `<div class="note-wrap"><input class="note-input" id="${id}" type="text" placeholder="${placeholder}"></div></div></div>`;
+    `<div class="note-slot" data-group="${id}" data-label="${title} note" data-placeholder="${placeholder}"></div>`;
 
   const pipelineIds = [];
   document.getElementById('pipelines').innerHTML = PIPELINE_DISPLAY.map(key => PIPELINES.find(card => card.key === key)).map(card => {
@@ -1125,8 +1203,8 @@
   }).join('');
 
   fieldIds.push(...pipelineIds);
-  fieldIds.push(...noteIds);
-  numberIds.push(...pipelineIds);
+    numberIds.push(...pipelineIds);
+  document.querySelectorAll('.note-slot').forEach(buildNoteGroup);
 
   const byId = id => document.getElementById(id);
 
@@ -1146,6 +1224,7 @@
     fieldIds.forEach(id => {
       data[id] = byId(id).value;
     });
+    data.__notes = noteValues();
     localStorage.setItem(STORAGE_KEY,JSON.stringify(data));
   };
 
@@ -1153,6 +1232,7 @@
     try{
       const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
       if(!saved || typeof saved !== 'object') return;
+      restoreNotes(saved.__notes);
       fieldIds.forEach(id => {
         if(Object.prototype.hasOwnProperty.call(saved,id)){
           byId(id).value = saved[id];
@@ -1178,11 +1258,8 @@
       return `${label}-${numberValue(valueId)}`;
     }).join('\n');
 
-    const noteLine = id => {
-      const noteText = byId(id).value.trim();
-      return noteText ? `\nNote - ${noteText}` : '';
-    };
-    const followUpNote = byId('fcNote').value.trim();
+    const noteLine = id => notesOf(id).map(text => `\nNote - ${text}`).join('');
+    const followUpNote = notesOf('fcNote').join('; ');
     const followUpNoteSuffix = followUpNote ? ` (${followUpNote})` : '';
 
     return heading +
@@ -1204,8 +1281,25 @@
       ).join('');
   };
 
+  const renderReport = text => {
+    const headings = new Set(['Calls', ...PIPELINES.map(card => card.title)]);
+    const repName = byId('repName').value.trim();
+    if(repName) headings.add(repName.toUpperCase());
+    byId('report').replaceChildren(...text.split('\n').map(line => {
+      const el = document.createElement('div');
+      if(!line){
+        el.className = 'rl-gap';
+        return el;
+      }
+      el.className = headings.has(line) ? 'rl-line rl-h' : 'rl-line';
+      el.textContent = line;
+      return el;
+    }));
+  };
+
   const render = () => {
-    byId('report').textContent = buildReport();
+    renderReport(buildReport());
+    numberIds.forEach(id => byId(id).classList.toggle('is-zero',numberValue(id) === 0));
 
     const dials =
       numberValue('leadCalls') +
@@ -1271,28 +1365,22 @@
     });
   });
 
-  ['repName',...noteIds].forEach(id => {
-    byId(id).addEventListener('input',update);
+  byId('repName').addEventListener('input',update);
+
+  document.addEventListener('click',e => {
+    const toggle = e.target.closest('.note-toggle');
+    if(!toggle) return;
+    const id = toggle.dataset.noteToggle;
+    if(!groupInputs(id).length) addNoteRow(id);
+    showNoteList(id,true);
   });
 
-  document.querySelectorAll('[data-note-toggle]').forEach(button => {
-    const input = byId(button.dataset.noteToggle);
-    const panel = byId(button.getAttribute('aria-controls'));
-    const sync = () => {
-      panel.hidden = button.getAttribute('aria-expanded') !== 'true';
-      button.textContent = input.value.trim() ? 'Edit note' : (panel.hidden ? 'Add a note' : 'Hide note');
-    };
-    if(input.value.trim()) button.setAttribute('aria-expanded','true');
-    sync();
-    button.addEventListener('click',() => {
-      button.setAttribute('aria-expanded',String(button.getAttribute('aria-expanded') !== 'true'));
-      sync();
-      if(!panel.hidden) input.focus();
-    });
-    input.addEventListener('input',() => {
-      sync();
-      update();
-    });
+  document.addEventListener('input',e => {
+    const input = e.target.closest ? e.target.closest('.note-input') : null;
+    if(!input) return;
+    const inputs = groupInputs(input.dataset.group);
+    if(inputs[inputs.length - 1].value.trim()) addNoteRow(input.dataset.group);
+    update();
   });
 
   document.querySelectorAll('.step').forEach(button => {
@@ -1304,19 +1392,21 @@
     });
   });
 
-  byId('copyBtn').addEventListener('click',async() => {
-    const button = byId('copyBtn');
+  const copyReport = async(button,idleLabel) => {
     const copied = await copyText(buildReport());
-
-    if(copied){
-      button.classList.add('done');
-      button.textContent = 'Copied ✓';
-      window.setTimeout(() => {
-        button.classList.remove('done');
-        button.textContent = 'Copy Report';
-      },1600);
+    if(!copied){
+      setStatus('Could not copy. Select the output text and copy it by hand.','error');
+      return;
     }
-  });
+    button.classList.add('done');
+    button.textContent = 'Copied ✓';
+    window.setTimeout(() => {
+      button.classList.remove('done');
+      button.textContent = idleLabel;
+    },1600);
+  };
+  byId('copyBtn').addEventListener('click',() => copyReport(byId('copyBtn'),'Copy Report'));
+  byId('copyOutputBtn').addEventListener('click',() => copyReport(byId('copyOutputBtn'),'Copy to clipboard'));
 
   byId('resetBtn').addEventListener('click',() => {
     if(!window.confirm('Start a new day? All numbers and notes will be cleared. The rep name and tally labels will be kept.')) return;
@@ -1325,13 +1415,7 @@
       byId(id).value = '0';
     });
 
-    noteIds.forEach(id => {
-      byId(id).value = '';
-      const button = document.querySelector(`[data-note-toggle="${id}"]`);
-      button.setAttribute('aria-expanded','false');
-      button.textContent = 'Add a note';
-      byId(button.getAttribute('aria-controls')).hidden = true;
-    });
+    noteIds.forEach(clearNoteGroup);
     update();
   });
 
@@ -1379,7 +1463,7 @@
       record[id] = numberValue(id);
     });
 
-    record.fcNote = byId('fcNote').value.trim();
+    record.fcNote = notesOf('fcNote').join('; ');
     record.totalCalls = record.leadCalls + record.firstConsultCalls + record.financeRunCalls + record.coffeeRunCalls;
     record.totalSpoke = record.fcSpoke + record.recSpoke;
     record.totalBooked = record.fcBooked + record.recBooked;
@@ -1446,12 +1530,13 @@
     setStatus('Publishing to spreadsheet…');
     try{
       const result = await postJson(API_PUBLISH,{record});
-      setStatus(`Published ${record.rep} · ${record.date} (${result.mode}).`,'success');
+      const time = new Date().toLocaleTimeString('en-AU',{hour:'numeric',minute:'2-digit'});
+      setStatus(`Published ${record.rep} for ${record.date} at ${time}.`,'success');
     }catch(error){
       if(error.status === 401) requestGatePasscode('Your access needs to be verified again. Enter the team passcode to continue.');
       setStatus(`Publish failed: ${error.message}`,'error');
     }finally{
-      setBusy(button,false,'Publish Results');
+      setBusy(button,false,'Publish Stats');
     }
   });
 
@@ -1764,8 +1849,13 @@
     }
   };
 
+  let pendingRemoveRow = null;
   const removeRep = rep => {
-    if (!confirm(`Remove ${rep.name} from the rep list? Their past figures stay on the sheets.`)) return;
+    pendingRemoveRow = rep.row;
+    renderAdminReps();
+  };
+  const confirmRemove = rep => {
+    pendingRemoveRow = null;
     runAdminAction({action:'remove', row: rep.row}, `${rep.name} removed.`);
   };
   const restoreRep = rep => runAdminAction({action:'restore', row: rep.row}, `${rep.name} restored.`);
@@ -1821,12 +1911,23 @@
         status.append(pill);
         const actions = document.createElement('td');
         actions.className = 'actions';
-        actions.append(
-          makeButton('Edit', 'btn-small', () => { editingRow = rep.row; renderAdminReps(); }),
-          rep.active
-            ? makeButton('Remove', 'btn-small danger', () => removeRep(rep))
-            : makeButton('Restore', 'btn-small', () => restoreRep(rep))
-        );
+        if (pendingRemoveRow === rep.row) {
+          const note = document.createElement('span');
+          note.className = 'muted-note';
+          note.textContent = 'Past figures stay on the sheets.';
+          status.append(note);
+          actions.append(
+            makeButton('Cancel', 'btn-small', () => { pendingRemoveRow = null; renderAdminReps(); }),
+            makeButton('Yes, remove', 'btn-small danger', () => confirmRemove(rep))
+          );
+        } else {
+          actions.append(
+            makeButton('Edit', 'btn-small', () => { editingRow = rep.row; pendingRemoveRow = null; renderAdminReps(); }),
+            rep.active
+              ? makeButton('Remove', 'btn-small danger', () => removeRep(rep))
+              : makeButton('Restore', 'btn-small', () => restoreRep(rep))
+          );
+        }
         row.append(makeCell(rep.name, 'name'), makeCell(rep.state), status, actions);
       }
       tbody.append(row);
@@ -1850,14 +1951,6 @@
   else setGateAccess(false);
 
   load();
-  noteIds.forEach(id => {
-    const input = byId(id);
-    if(!input.value.trim()) return;
-    const button = document.querySelector(`[data-note-toggle="${id}"]`);
-    button.setAttribute('aria-expanded','true');
-    button.textContent = 'Edit note';
-    byId(button.getAttribute('aria-controls')).hidden = false;
-  });
   numberIds.forEach(id => cleanNumberInput(byId(id)));
   render();
 })();
