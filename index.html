@@ -684,6 +684,44 @@
     .gate-panel .rep-card{padding:16px;gap:12px}
     .gate-panel .rep-field select,.gate-panel .rep-field input{font-size:16px}
   }
+
+  /* Admin panel */
+  .modal[hidden]{display:none}
+  .modal{position:fixed;inset:0;z-index:50;background:rgba(14,26,47,.55);display:flex;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(3px)}
+  .modal-card{background:var(--card);border:1px solid var(--line);border-radius:18px;box-shadow:0 30px 80px -24px rgba(14,26,47,.45);width:min(760px,100%);max-height:calc(100vh - 40px);overflow:auto;padding:28px 30px}
+  .modal-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:18px;padding-bottom:16px;border-bottom:1px solid var(--line)}
+  .modal-head .eyebrow{font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--gold-deep);font-weight:700;margin-bottom:6px}
+  .modal-head h2{font:500 26px/1.15 Georgia,serif;color:var(--navy)}
+  .modal-close{background:none;border:0;font-size:28px;line-height:1;color:var(--muted);cursor:pointer;padding:4px 8px}
+  .modal-close:hover{color:var(--ink)}
+  .modal-lead{color:var(--muted);font-size:14px;line-height:1.55;margin-bottom:16px}
+  .modal-error{margin-top:12px;font-size:13.5px;color:#a33a2e;font-weight:600}
+  .modal-ok{margin-top:12px;font-size:13.5px;color:var(--green);font-weight:600}
+  .pin-row{display:flex;gap:12px;margin:18px 0 6px}
+  .pin-box{width:64px;height:72px;text-align:center;font:600 30px 'IBM Plex Sans',sans-serif;color:var(--navy);background:#fff;border:1px solid var(--line2);border-radius:12px;outline:none}
+  .pin-box:focus{border-color:var(--gold);box-shadow:0 0 0 3px rgba(179,145,63,.2)}
+  .table-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:12px;background:#fff}
+  .rep-table{width:100%;border-collapse:collapse;font-size:14px}
+  .rep-table th{text-align:left;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-weight:700;padding:12px 14px;background:var(--inset);border-bottom:1px solid var(--line)}
+  .rep-table td{padding:11px 14px;border-bottom:1px solid var(--line);vertical-align:middle;color:var(--ink)}
+  .rep-table tr:last-child td{border-bottom:0}
+  .rep-table td.name{font-weight:600}
+  .rep-table td.actions{text-align:right;white-space:nowrap}
+  .rep-table td.empty{text-align:center;color:var(--muted);padding:24px}
+  .rep-table input,.rep-table select,.add-fields input,.add-fields select{font:inherit;font-size:14px;padding:8px 10px;border:1px solid var(--line2);border-radius:8px;background:#fff;color:var(--ink);width:100%}
+  .pill{display:inline-block;font-size:11.5px;font-weight:700;padding:4px 10px;border-radius:99px;letter-spacing:.04em}
+  .pill.on{background:#e4f3ec;color:var(--green)}
+  .pill.off{background:#f1ece3;color:var(--muted)}
+  .btn-small{font:inherit;font-size:13px;font-weight:700;padding:7px 14px;border-radius:99px;border:1px solid var(--line2);background:#fff;color:var(--ink);cursor:pointer;margin-left:6px}
+  .btn-small:hover{border-color:var(--navy)}
+  .btn-small.primary{background:var(--navy);border-color:var(--navy);color:#fff}
+  .btn-small.danger{color:#a33a2e;border-color:#e6c2bb}
+  .add-rep{margin-top:22px}
+  .section-label{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--gold-deep);font-weight:700;margin-bottom:10px}
+  .add-fields{display:grid;grid-template-columns:1fr 120px auto;gap:10px;align-items:center}
+  .add-fields .btn{white-space:nowrap}
+  .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+  @media (max-width:560px){.add-fields{grid-template-columns:1fr}.pin-box{width:52px;height:62px}.modal-card{padding:22px 20px}}
 </style>
 </head>
 <body data-view="gate">
@@ -773,9 +811,54 @@
       <button class="btn gold" id="copyBtn" type="button">Copy Report</button>
       <button class="btn ghost" id="resetBtn" type="button">New Day ⟲</button>
       <button class="btn ghost" id="changeRepBtn" type="button" hidden>Change rep</button>
+      <button class="btn ghost" id="adminBtn" type="button">Admin</button>
     </div>
   </div>
 </header>
+
+<div class="modal" id="adminModal" hidden>
+  <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="adminTitle">
+    <div class="modal-head">
+      <div>
+        <p class="eyebrow">Admin</p>
+        <h2 id="adminTitle">Rep list</h2>
+      </div>
+      <button class="modal-close" id="adminClose" type="button" aria-label="Close">&times;</button>
+    </div>
+
+    <div id="pinView">
+      <p class="modal-lead">Enter the 4-digit admin PIN to manage reps.</p>
+      <div class="pin-row" id="pinRow">
+        <input class="pin-box" type="password" inputmode="numeric" maxlength="1" autocomplete="off" aria-label="PIN digit 1">
+        <input class="pin-box" type="password" inputmode="numeric" maxlength="1" autocomplete="off" aria-label="PIN digit 2">
+        <input class="pin-box" type="password" inputmode="numeric" maxlength="1" autocomplete="off" aria-label="PIN digit 3">
+        <input class="pin-box" type="password" inputmode="numeric" maxlength="1" autocomplete="off" aria-label="PIN digit 4">
+      </div>
+      <p class="modal-error" id="pinError" hidden></p>
+    </div>
+
+    <div id="repView" hidden>
+      <p class="modal-lead">Edit names and states, add reps, or remove them from the gate. Removed reps keep their past figures.</p>
+      <div class="table-wrap">
+        <table class="rep-table">
+          <thead>
+            <tr><th>Name</th><th>State</th><th>Status</th><th><span class="sr">Actions</span></th></tr>
+          </thead>
+          <tbody id="repRows"></tbody>
+        </table>
+      </div>
+      <form class="add-rep" id="addRepForm" autocomplete="off">
+        <p class="section-label">Add a rep</p>
+        <div class="add-fields">
+          <input id="newRepName" type="text" maxlength="40" placeholder="Full name" aria-label="New rep name">
+          <select id="newRepState" aria-label="New rep state"><option value="NSW">NSW</option><option value="ACT">ACT</option><option value="VIC">VIC</option><option value="QLD">QLD</option><option value="SA">SA</option><option value="WA">WA</option><option value="TAS">TAS</option><option value="NT">NT</option></select>
+          <button class="btn dark" type="submit">Add rep</button>
+        </div>
+      </form>
+      <p class="modal-error" id="repMessage" hidden></p>
+    </div>
+  </div>
+</div>
 
 <main class="app">
 
@@ -1553,6 +1636,215 @@
   });
 
   showView('gate');
+
+  // ----- Admin panel. The PIN is held only while the panel is open. -----
+  const ADMIN_STATES = ['NSW','ACT','VIC','QLD','SA','WA','TAS','NT'];
+  const adminModal = byId('adminModal');
+  const pinBoxes = Array.from(document.querySelectorAll('.pin-box'));
+  let adminPin = '';
+  let adminReps = [];
+  let editingRow = null;
+
+  const pinValue = () => pinBoxes.map(box => box.value).join('');
+  const resetPinBoxes = () => { pinBoxes.forEach(box => { box.value = ''; }); };
+  const showPinError = message => { byId('pinError').textContent = message || ''; byId('pinError').hidden = !message; };
+  const showRepMessage = (message, isError) => {
+    const el = byId('repMessage');
+    el.textContent = message || '';
+    el.hidden = !message;
+    el.className = isError ? 'modal-error' : 'modal-ok';
+  };
+
+  const adminRequest = async (method, body) => {
+    const response = await fetch('/api/admin', {
+      method,
+      headers: {'Content-Type':'application/json','x-admin-pin': adminPin},
+      body: method === 'GET' ? undefined : JSON.stringify(body),
+    });
+    const result = await response.json().catch(() => ({ok:false,error:`Server returned ${response.status}`}));
+    if (!response.ok || !result.ok) {
+      const error = new Error(result.error || 'Request failed');
+      error.status = response.status;
+      throw error;
+    }
+    return result;
+  };
+
+  const openAdmin = () => {
+    adminPin = '';
+    adminReps = [];
+    editingRow = null;
+    resetPinBoxes();
+    showPinError('');
+    showRepMessage('', false);
+    byId('pinView').hidden = false;
+    byId('repView').hidden = true;
+    adminModal.hidden = false;
+    pinBoxes[0].focus();
+  };
+  const closeAdmin = () => {
+    adminPin = '';
+    adminReps = [];
+    editingRow = null;
+    resetPinBoxes();
+    adminModal.hidden = true;
+  };
+
+  const unlockAdmin = async () => {
+    const pin = pinValue();
+    if (!/^\d{4}$/.test(pin)) { showPinError('Enter all 4 digits.'); return; }
+    adminPin = pin;
+    try {
+      const result = await adminRequest('GET');
+      adminReps = result.reps;
+      showPinError('');
+      byId('pinView').hidden = true;
+      byId('repView').hidden = false;
+      renderAdminReps();
+    } catch (error) {
+      adminPin = '';
+      resetPinBoxes();
+      pinBoxes[0].focus();
+      showPinError(error.status === 401 ? 'That PIN was not accepted.' : error.message);
+    }
+  };
+
+  pinBoxes.forEach((box, i) => {
+    box.addEventListener('input', () => {
+      box.value = box.value.replace(/\D/g,'').slice(-1);
+      if (box.value && i < pinBoxes.length - 1) pinBoxes[i + 1].focus();
+      if (pinValue().length === 4) unlockAdmin();
+    });
+    box.addEventListener('keydown', e => {
+      if (e.key === 'Backspace' && !box.value && i > 0) pinBoxes[i - 1].focus();
+    });
+    box.addEventListener('paste', e => {
+      const digits = (e.clipboardData.getData('text') || '').replace(/\D/g,'').slice(0,4);
+      if (!digits) return;
+      e.preventDefault();
+      digits.split('').forEach((d, j) => { pinBoxes[j].value = d; });
+      pinBoxes[Math.min(digits.length, 3)].focus();
+      if (digits.length === 4) unlockAdmin();
+    });
+  });
+
+  const refreshAdminReps = async () => {
+    const result = await adminRequest('GET');
+    adminReps = result.reps;
+    editingRow = null;
+    renderAdminReps();
+  };
+
+  const makeButton = (label, className, onClick) => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = className;
+    button.textContent = label;
+    button.addEventListener('click', onClick);
+    return button;
+  };
+  const makeCell = (text, className = '') => {
+    const cell = document.createElement('td');
+    if (className) cell.className = className;
+    cell.textContent = text;
+    return cell;
+  };
+
+  const runAdminAction = async (body, message) => {
+    showRepMessage('', false);
+    try {
+      await adminRequest('POST', body);
+      await refreshAdminReps();
+      showRepMessage(message, false);
+      return true;
+    } catch (error) {
+      if (error.status === 401) { closeAdmin(); return false; }
+      showRepMessage(error.message, true);
+      return false;
+    }
+  };
+
+  const removeRep = rep => {
+    if (!confirm(`Remove ${rep.name} from the rep list? Their past figures stay on the sheets.`)) return;
+    runAdminAction({action:'remove', row: rep.row}, `${rep.name} removed.`);
+  };
+  const restoreRep = rep => runAdminAction({action:'restore', row: rep.row}, `${rep.name} restored.`);
+
+  const editCells = rep => {
+    const nameInput = document.createElement('input');
+    nameInput.type = 'text';
+    nameInput.maxLength = 40;
+    nameInput.value = rep.name;
+    nameInput.setAttribute('aria-label', 'Name');
+    const stateSelect = document.createElement('select');
+    stateSelect.setAttribute('aria-label', 'State');
+    ADMIN_STATES.forEach(code => {
+      const option = document.createElement('option');
+      option.value = code;
+      option.textContent = code;
+      option.selected = code === rep.state;
+      stateSelect.append(option);
+    });
+    const nameCell = document.createElement('td');
+    nameCell.append(nameInput);
+    const stateCell = document.createElement('td');
+    stateCell.append(stateSelect);
+    const actions = document.createElement('td');
+    actions.className = 'actions';
+    actions.append(
+      makeButton('Save', 'btn-small primary', () => runAdminAction({action:'update', row: rep.row, name: nameInput.value, state: stateSelect.value}, 'Saved.')),
+      makeButton('Cancel', 'btn-small', () => { editingRow = null; renderAdminReps(); })
+    );
+    return [nameCell, stateCell, makeCell(rep.active ? 'Active' : 'Removed'), actions];
+  };
+
+  const renderAdminReps = () => {
+    const tbody = byId('repRows');
+    tbody.replaceChildren();
+    if (!adminReps.length) {
+      const row = document.createElement('tr');
+      const cell = makeCell('No reps yet. Add one below.', 'empty');
+      cell.colSpan = 4;
+      row.append(cell);
+      tbody.append(row);
+      return;
+    }
+    adminReps.forEach(rep => {
+      const row = document.createElement('tr');
+      if (editingRow === rep.row) {
+        row.append(...editCells(rep));
+      } else {
+        const status = document.createElement('td');
+        const pill = document.createElement('span');
+        pill.className = 'pill ' + (rep.active ? 'on' : 'off');
+        pill.textContent = rep.active ? 'Active' : 'Removed';
+        status.append(pill);
+        const actions = document.createElement('td');
+        actions.className = 'actions';
+        actions.append(
+          makeButton('Edit', 'btn-small', () => { editingRow = rep.row; renderAdminReps(); }),
+          rep.active
+            ? makeButton('Remove', 'btn-small danger', () => removeRep(rep))
+            : makeButton('Restore', 'btn-small', () => restoreRep(rep))
+        );
+        row.append(makeCell(rep.name, 'name'), makeCell(rep.state), status, actions);
+      }
+      tbody.append(row);
+    });
+  };
+
+  byId('adminBtn').addEventListener('click', openAdmin);
+  byId('adminClose').addEventListener('click', closeAdmin);
+  adminModal.addEventListener('click', e => { if (e.target === adminModal) closeAdmin(); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && !adminModal.hidden) closeAdmin(); });
+  byId('addRepForm').addEventListener('submit', e => {
+    e.preventDefault();
+    const name = byId('newRepName').value.trim();
+    if (!name) { showRepMessage('Enter a name for the new rep.', true); return; }
+    runAdminAction({action:'add', name, state: byId('newRepState').value}, `${name} added.`).then(ok => {
+      if (ok) byId('newRepName').value = '';
+    });
+  });
 
   if(readPasscode()) loadReps();
   else setGateAccess(false);
