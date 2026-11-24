@@ -1,0 +1,364 @@
+From bc208d7a3bd79dc00f20b776aa04cde6f067807f Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Tue, 24 Nov 2026 13:39:11 +0800
+Subject: [PATCH] Publish DRAPS stats straight to the weekly approval tab
+
+Publish now writes one row per rep per day to "Rep DRAPS - For Approval"
+in the weekly report sheet (WEEKLY_SHEET_ID), so the weekly sheet no longer
+has to load stats from the DRAPS Log. The DRAPS Log and rep list are unchanged.
+
+- lib/approval.js maps DRAPS fields to approval columns A to Y. Super and
+  RE-FI are blank, since DRAPS has no fields for them.
+- Notes to the right of column Y are left alone on republish.
+- Logged At is Brisbane time, DD/MM/YYYY HH:mm.
+- New env var WEEKLY_SHEET_ID; SHEET_ID still points at the DRAPS sheet.
+
+Co-Authored-By: Claude Haiku 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01DLAKjCBfuhXmRVw2hDU4zi
+---
+ README.md             |   8 ++-
+ api/publish.js        | 133 ++++++++++++++++++++++++++----------------
+ lib/approval.js       |  57 ++++++++++++++++++
+ package.json          |   4 +-
+ test/approval.test.js |  51 ++++++++++++++++
+ 5 files changed, 198 insertions(+), 55 deletions(-)
+ create mode 100644 lib/approval.js
+ create mode 100644 test/approval.test.js
+
+diff --git a/README.md b/README.md
+index 980e2e6..5816d71 100644
+--- a/README.md
++++ b/README.md
+@@ -3,7 +3,8 @@
+ Vercel-hosted DRAPS daily stats app: `index.html` plus two serverless routes.
+ 
+ - `index.html`: the daily tally UI, with **Publish Results** and **Send to Management**.
+-- `api/publish.js`: writes one row per rep per day to the `DRAPS Log` tab of a Google Sheet. Republishing the same date and rep updates that row.
++- `api/publish.js`: writes one row per rep per day to the approval tab **Rep DRAPS - For Approval** in the weekly report sheet (`WEEKLY_SHEET_ID`). It also keeps the `DRAPS Log` tab in the DRAPS sheet (`SHEET_ID`) up to date. Republishing the same date and rep updates that row.
++- `lib/approval.js`: maps DRAPS fields to the approval tab columns. Super and RE-FI are not in DRAPS, so they are left blank for Daily Entry.
+ - `api/email.js`: sends the WhatsApp-format report to the management recipients, subject `DRAPS - Rep Name - Day - DD/MM/YYYY` (Perth time).
+ - `lib/draps.js`: shared column order and input validation.
+ 
+@@ -12,13 +13,14 @@ Vercel-hosted DRAPS daily stats app: `index.html` plus two serverless routes.
+ | Name | Value |
+ | --- | --- |
+ | `GOOGLE_SERVICE_ACCOUNT_JSON` | Full JSON key of a Google service account |
+-| `SHEET_ID` | ID from the spreadsheet URL (`/d/<SHEET_ID>/edit`) |
++| `SHEET_ID` | ID of the DRAPS spreadsheet (holds `DRAPS Log` and `Reps`) |
++| `WEEKLY_SHEET_ID` | ID of the weekly report spreadsheet (holds `Rep DRAPS - For Approval`) |
+ | `GMAIL_USER` | Gmail address that sends the email |
+ | `GMAIL_APP_PASSWORD` | Gmail app password (requires 2-Step Verification) |
+ | `MANAGEMENT_RECIPIENTS` | Comma-separated list of management email addresses |
+ | `DRAPS_PASSCODE` | Passcode the page asks for once per device. Both API routes reject requests without it. |
+ 
+-Share the spreadsheet with the service account's email address as Editor.
++Share both spreadsheets with the service account's email address as Editor.
+ 
+ ## Local check
+ 
+diff --git a/api/publish.js b/api/publish.js
+index 7043054..384dfc9 100644
+--- a/api/publish.js
++++ b/api/publish.js
+@@ -1,9 +1,11 @@
+-import { google } from 'googleapis';
+-import { COLUMNS, SHEET_TAB, validateRecord, assertEnv, checkPasscode, missingHeaders } from '../lib/draps.js';
++import { COLUMNS, SHEET_TAB, validateRecord, assertEnv, checkPasscode, missingHeaders, columnLetter } from '../lib/draps.js';
++import { getSheetsClient } from '../lib/sheets.js';
++import { APPROVAL_TAB, APPROVAL_FIRST_ROW, APPROVAL_COLUMNS, approvalRow, loggedAtBrisbane } from '../lib/approval.js';
+ 
+ // POST /api/publish  { record }   header: x-draps-passcode
+-// Writes one row per rep per date to the DRAPS Log tab. Republishing the same
+-// date and rep updates that row instead of adding a duplicate.
++// 1. Updates the approval tab of the weekly report (WEEKLY_SHEET_ID): one row per rep per date.
++//    Republishing the same date and rep updates that row. Notes columns to the right are left alone.
++// 2. Keeps the DRAPS Log tab (SHEET_ID) up to date as before.
+ export default async function handler(req, res) {
+   if (req.method !== 'POST') return res.status(405).json({ ok: false, error: 'Method not allowed' });
+ 
+@@ -11,66 +13,96 @@ export default async function handler(req, res) {
+   if (!auth.ok) return res.status(auth.status).json({ ok: false, error: auth.error });
+ 
+   try {
+-    assertEnv(['GOOGLE_SERVICE_ACCOUNT_JSON', 'SHEET_ID']);
++    assertEnv(['GOOGLE_SERVICE_ACCOUNT_JSON', 'SHEET_ID', 'WEEKLY_SHEET_ID']);
+ 
+     const checked = validateRecord(req.body?.record);
+     if (!checked.ok) return res.status(400).json(checked);
+     const { record } = checked;
+ 
+-    const credentials = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_JSON);
+-    const auth = new google.auth.GoogleAuth({
+-      credentials,
+-      scopes: ['https://www.googleapis.com/auth/spreadsheets'],
+-    });
+-    const sheets = google.sheets({ version: 'v4', auth });
+-    const spreadsheetId = process.env.SHEET_ID;
++    const sheets = getSheetsClient();
++    const approvalMode = await publishApproval(sheets, process.env.WEEKLY_SHEET_ID, record);
++    const logMode = await publishLog(sheets, process.env.SHEET_ID, record);
+ 
+-    await ensureTab(sheets, spreadsheetId);
++    return res.status(200).json({ ok: true, mode: approvalMode, log: logMode });
++  } catch (error) {
++    console.error('publish failed', error);
++    return res.status(500).json({ ok: false, error: 'Could not write to the spreadsheet. Check the server logs.' });
++  }
++}
+ 
+-    const row = COLUMNS.map(([, key]) => record[key] ?? '');
+-    const range = `'${SHEET_TAB}'!A:A`;
+-    const existing = await sheets.spreadsheets.values.get({
+-      spreadsheetId,
+-      range: `'${SHEET_TAB}'!A:C`,
+-    });
++// Writes the rep's row on the approval tab. Returns 'added' or 'updated'.
++async function publishApproval(sheets, spreadsheetId, record) {
++  const tab = `'${APPROVAL_TAB}'`;
++  const existing = await sheets.spreadsheets.values.get({
++    spreadsheetId,
++    range: `${tab}!B${APPROVAL_FIRST_ROW}:C1000`,
++  });
++  const rows = existing.data.values || [];
++
++  const same = rows.findIndex(r => (r[0] || '').trim() === record.date && (r[1] || '').trim() === record.rep);
++  let index = same;
++  let mode = 'updated';
++  if (same < 0) {
++    mode = 'added';
++    const blank = rows.findIndex(r => !(r[0] || '').trim() && !(r[1] || '').trim());
++    index = blank >= 0 ? blank : rows.length;
++  }
+ 
+-    const rows = existing.data.values || [];
+-    if (rows.length > 0) await extendHeader(sheets, spreadsheetId);
+-    const index = rows.findIndex((r, i) => i > 0 && r[0] === record.date && (r[2] || '').trim() === record.rep);
+-
+-    if (index > 0) {
+-      const rowNumber = index + 1;
+-      await sheets.spreadsheets.values.update({
+-        spreadsheetId,
+-        range: `'${SHEET_TAB}'!A${rowNumber}`,
+-        valueInputOption: 'USER_ENTERED',
+-        requestBody: { values: [row] },
+-      });
+-      return res.status(200).json({ ok: true, mode: 'updated' });
+-    }
+-
+-    if (rows.length === 0) {
+-      await sheets.spreadsheets.values.update({
+-        spreadsheetId,
+-        range: `'${SHEET_TAB}'!A1`,
+-        valueInputOption: 'RAW',
+-        requestBody: { values: [COLUMNS.map(([header]) => header)] },
+-      });
+-    }
+-
+-    await sheets.spreadsheets.values.append({
++  const rowNumber = APPROVAL_FIRST_ROW + index;
++  const last = APPROVAL_COLUMNS.length;
++  const lastLetter = columnLetter(last);
++  await sheets.spreadsheets.values.update({
++    spreadsheetId,
++    range: `${tab}!A${rowNumber}:${lastLetter}${rowNumber}`,
++    valueInputOption: 'RAW',
++    requestBody: { values: [approvalRow(record, loggedAtBrisbane())] },
++  });
++  return mode;
++}
++
++// Writes the DRAPS Log row. Returns 'added' or 'updated'.
++async function publishLog(sheets, spreadsheetId, record) {
++  await ensureTab(sheets, spreadsheetId);
++
++  const row = COLUMNS.map(([, key]) => record[key] ?? '');
++  const range = `'${SHEET_TAB}'!A:A`;
++  const existing = await sheets.spreadsheets.values.get({
++    spreadsheetId,
++    range: `'${SHEET_TAB}'!A:C`,
++  });
++
++  const rows = existing.data.values || [];
++  if (rows.length > 0) await extendHeader(sheets, spreadsheetId);
++  const index = rows.findIndex((r, i) => i > 0 && r[0] === record.date && (r[2] || '').trim() === record.rep);
++
++  if (index > 0) {
++    const rowNumber = index + 1;
++    await sheets.spreadsheets.values.update({
+       spreadsheetId,
+-      range,
++      range: `'${SHEET_TAB}'!A${rowNumber}`,
+       valueInputOption: 'USER_ENTERED',
+-      insertDataOption: 'INSERT_ROWS',
+       requestBody: { values: [row] },
+     });
++    return 'updated';
++  }
+ 
+-    return res.status(200).json({ ok: true, mode: 'added' });
+-  } catch (error) {
+-    console.error('publish failed', error);
+-    return res.status(500).json({ ok: false, error: 'Could not write to the spreadsheet. Check the server logs.' });
++  if (rows.length === 0) {
++    await sheets.spreadsheets.values.update({
++      spreadsheetId,
++      range: `'${SHEET_TAB}'!A1`,
++      valueInputOption: 'RAW',
++      requestBody: { values: [COLUMNS.map(([header]) => header)] },
++    });
+   }
++
++  await sheets.spreadsheets.values.append({
++    spreadsheetId,
++    range,
++    valueInputOption: 'USER_ENTERED',
++    insertDataOption: 'INSERT_ROWS',
++    requestBody: { values: [row] },
++  });
++  return 'added';
+ }
+ 
+ // Adds header cells for columns added since the tab was created. Existing headers are left alone.
+@@ -97,3 +129,4 @@ async function ensureTab(sheets, spreadsheetId) {
+     requestBody: { requests: [{ addSheet: { properties: { title: SHEET_TAB } } }] },
+   });
+ }
++
+diff --git a/lib/approval.js b/lib/approval.js
+new file mode 100644
+index 0000000..59e93ac
+--- /dev/null
++++ b/lib/approval.js
+@@ -0,0 +1,57 @@
++// Publishes today's figures straight into the weekly report's approval tab.
++// The tab's header row is row 5 and data starts on row 6. Columns A to Y match the
++// headers in the weekly spreadsheet. Super and RE-FI are not in DRAPS, so they are
++// left blank for Hannah to enter on Daily Entry.
++import { pipelineKey } from './draps.js';
++
++export const APPROVAL_TAB = 'Rep DRAPS - For Approval';
++export const APPROVAL_FIRST_ROW = 6;
++
++// [header on the approval tab, key in the record (null = blank)]
++export const APPROVAL_COLUMNS = [
++  ['Logged At', 'loggedAt'],
++  ['Day', 'date'],
++  ['Rep', 'rep'],
++  ['Door Qs', 'dValue'],
++  ['FC Apps', pipelineKey('fcPipe', 'appointments')],
++  ['FC Presented', pipelineKey('fcPipe', 'presented')],
++  ['FR Booked', pipelineKey('fcPipe', 'sold')],
++  ['Finance Apps', pipelineKey('financePipe', 'appointments')],
++  ['Finance Presented', pipelineKey('financePipe', 'presented')],
++  ['Sales Booked', pipelineKey('financePipe', 'sold')],
++  ['Property Booked', pipelineKey('property', 'appointments')],
++  ['Property Presented', pipelineKey('property', 'presented')],
++  ['Properties Sold', pipelineKey('property', 'sold')],
++  ['SMSF Booked', pipelineKey('smsf', 'appointments')],
++  ['SMSF Presented', pipelineKey('smsf', 'presented')],
++  ['SMSF Sold', pipelineKey('smsf', 'sold')],
++  ['Super Booked', null],
++  ['Super Presented', null],
++  ['Super Sales', null],
++  ['Contract Booked', pipelineKey('contract', 'booked')],
++  ['Contract Presented', pipelineKey('contract', 'presented')],
++  ['Contracts Signed', pipelineKey('contract', 'sold')],
++  ['RE-FI Booked', null],
++  ['RE-FI Presented', null],
++  ['RE-FIs Done', null],
++];
++
++// Brisbane time, DD/MM/YYYY HH:mm, for the Logged At column.
++export function loggedAtBrisbane(now = new Date()) {
++  const parts = Object.fromEntries(
++    new Intl.DateTimeFormat('en-AU', {
++      timeZone: 'Australia/Brisbane', day: '2-digit', month: '2-digit', year: 'numeric',
++      hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
++    }).formatToParts(now).map(p => [p.type, p.value])
++  );
++  return `${parts.day}/${parts.month}/${parts.year} ${parts.hour}:${parts.minute}`;
++}
++
++// One approval row from a validated record. Values are in the order of APPROVAL_COLUMNS.
++export function approvalRow(record, loggedAt) {
++  return APPROVAL_COLUMNS.map(([, key]) => {
++    if (key === null) return '';
++    if (key === 'loggedAt') return loggedAt;
++    return record[key] ?? '';
++  });
++}
+diff --git a/package.json b/package.json
+index 13d83ea..505a2f9 100644
+--- a/package.json
++++ b/package.json
+@@ -5,8 +5,8 @@
+   "type": "module",
+   "description": "ASG daily stats (DRAPS) web app with publish and management email routes",
+   "scripts": {
+-    "check": "node --check api/publish.js && node --check api/email.js && node --check api/reps.js && node --check lib/draps.js && node --check lib/email-format.js && node --check lib/reps.js && node --check lib/reps-store.js && node --check lib/sheets.js",
+-    "test": "node --test test/reps.test.js test/reps-store.test.js test/reps-api.test.js test/e2e-server.test.js test/portal.test.js test/draps-record.test.js test/email-format.test.js"
++    "check": "node --check api/publish.js && node --check api/email.js && node --check api/reps.js && node --check lib/draps.js && node --check lib/email-format.js && node --check lib/reps.js && node --check lib/reps-store.js && node --check lib/sheets.js && node --check lib/approval.js",
++    "test": "node --test test/reps.test.js test/reps-store.test.js test/reps-api.test.js test/e2e-server.test.js test/portal.test.js test/draps-record.test.js test/email-format.test.js test/approval.test.js"
+   },
+   "engines": {
+     "node": ">=18"
+diff --git a/test/approval.test.js b/test/approval.test.js
+new file mode 100644
+index 0000000..2bf12b4
+--- /dev/null
++++ b/test/approval.test.js
+@@ -0,0 +1,51 @@
++import { test } from 'node:test';
++import assert from 'node:assert/strict';
++import { APPROVAL_COLUMNS, approvalRow, loggedAtBrisbane } from '../lib/approval.js';
++import { PIPELINES, pipelineKey, validateRecord, columnLetter } from '../lib/draps.js';
++
++// Headers as they appear in row 5 of "Rep DRAPS - For Approval" in the weekly sheet.
++const SHEET_HEADERS = [
++  'Logged At', 'Day', 'Rep', 'Door Qs', 'FC Apps', 'FC Presented', 'FR Booked', 'Finance Apps',
++  'Finance Presented', 'Sales Booked', 'Property Booked', 'Property Presented', 'Properties Sold',
++  'SMSF Booked', 'SMSF Presented', 'SMSF Sold', 'Super Booked', 'Super Presented', 'Super Sales',
++  'Contract Booked', 'Contract Presented', 'Contracts Signed', 'RE-FI Booked', 'RE-FI Presented', 'RE-FIs Done',
++];
++
++test('approval columns match the weekly sheet headers in order (A to Y)', () => {
++  assert.deepEqual(APPROVAL_COLUMNS.map(([h]) => h), SHEET_HEADERS);
++  assert.equal(columnLetter(APPROVAL_COLUMNS.length), 'Y');
++});
++
++test('every mapped key is a real DRAPS record key or a blank', () => {
++  const keys = new Set(PIPELINES.flatMap(c => c.fields.map(([f]) => pipelineKey(c.key, f))));
++  keys.add('dValue'); keys.add('date'); keys.add('rep'); keys.add('loggedAt');
++  for (const [, key] of APPROVAL_COLUMNS) {
++    if (key !== null) assert.ok(keys.has(key), `unknown key ${key}`);
++  }
++});
++
++test('approvalRow puts the record values in the right columns and leaves Super and RE-FI blank', () => {
++  const checked = validateRecord({
++    date: '24/11/2026', day: 'Tuesday', rep: 'Mitchell', dValue: '7',
++    [pipelineKey('fcPipe', 'appointments')]: '3',
++    [pipelineKey('fcPipe', 'sold')]: '1',
++    [pipelineKey('contract', 'sold')]: '2',
++  });
++  assert.ok(checked.ok);
++  const row = approvalRow(checked.record, '24/11/2026 13:30');
++  const byHeader = Object.fromEntries(SHEET_HEADERS.map((h, i) => [h, row[i]]));
++  assert.equal(byHeader['Logged At'], '24/11/2026 13:30');
++  assert.equal(byHeader['Day'], '24/11/2026');
++  assert.equal(byHeader['Rep'], 'Mitchell');
++  assert.equal(byHeader['Door Qs'], 7);
++  assert.equal(byHeader['FC Apps'], 3);
++  assert.equal(byHeader['FR Booked'], 1);
++  assert.equal(byHeader['Contracts Signed'], 2);
++  assert.equal(byHeader['Super Booked'], '');
++  assert.equal(byHeader['RE-FIs Done'], '');
++});
++
++test('loggedAtBrisbane formats DD/MM/YYYY HH:mm in Brisbane time', () => {
++  // 2026-11-24 00:00 UTC is 10:00 on 24/11/2026 in Brisbane (UTC+10, no daylight saving).
++  assert.equal(loggedAtBrisbane(new Date('2026-11-24T00:00:00Z')), '24/11/2026 10:00');
++});
+-- 
+2.43.0
+
