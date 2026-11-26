@@ -80,6 +80,7 @@
     color:#c8cfdb;
     font:400 12px 'IBM Plex Mono',monospace;
   }
+  .date-chip input{margin-left:8px;padding:3px 6px;border:1px solid #52627b;border-radius:6px;background:#101a2b;color:#f5f1e8;color-scheme:dark;font:inherit}
 
   .btn{
     padding:11px 20px;
@@ -707,6 +708,9 @@
   .rep-table tr:last-child td{border-bottom:0}
   .rep-table td.name{font-weight:600}
   .rep-table td.actions{text-align:right;white-space:nowrap}
+  .tier-choices{display:flex;gap:7px;flex-wrap:wrap;min-width:150px}
+  .tier-choices label{display:inline-flex;align-items:center;gap:3px;font-size:12px}
+  .tier-choices input{width:auto}
   .rep-table td.empty{text-align:center;color:var(--muted);padding:24px}
   .rep-table input,.rep-table select,.add-fields input,.add-fields select{font:inherit;font-size:14px;padding:8px 10px;border:1px solid var(--line2);border-radius:8px;background:#fff;color:var(--ink);width:100%}
   .pill{display:inline-block;font-size:11.5px;font-weight:700;padding:4px 10px;border-radius:99px;letter-spacing:.04em}
@@ -822,7 +826,7 @@
       <h1>Daily Stats <span class="asg">- ASG</span></h1>
     </div>
     <div class="head-right">
-      <div class="date-chip" id="dateChip"></div>
+      <label class="date-chip" id="dateChip">Report date<input id="reportDate" type="date" aria-label="Report date"></label>
       <button class="btn gold" id="copyBtn" type="button">Copy Report</button>
       <button class="btn ghost" id="resetBtn" type="button">New Day ⟲</button>
       <button class="btn ghost" id="changeRepBtn" type="button" hidden>Change rep</button>
@@ -857,7 +861,7 @@
       <div class="table-wrap">
         <table class="rep-table">
           <thead>
-            <tr><th>Name</th><th>State</th><th>Status</th><th><span class="sr">Actions</span></th></tr>
+            <tr><th>Name</th><th>State</th><th>Tiers</th><th>Status</th><th><span class="sr">Actions</span></th></tr>
           </thead>
           <tbody id="repRows"></tbody>
         </table>
@@ -1432,10 +1436,13 @@
       year:'numeric'
     }).formatToParts(new Date());
     const part = type => parts.find(p => p.type === type).value;
-    return {
-      weekday: part('weekday'),
-      date: `${part('day')}/${part('month')}/${part('year')}`
-    };
+    const selected = byId('reportDate')?.value;
+    const date = selected ? new Date(`${selected}T12:00:00`) : new Date();
+    const chosenParts = new Intl.DateTimeFormat('en-AU',{
+      timeZone, weekday:'long', day:'2-digit', month:'2-digit', year:'numeric'
+    }).formatToParts(date);
+    const chosen = type => chosenParts.find(p => p.type === type).value;
+    return { weekday: chosen('weekday'), date: `${chosen('day')}/${chosen('month')}/${chosen('year')}` };
   };
 
   const buildSubject = record => `DRAPS - ${record.rep} - ${record.day} - ${record.date}`;
@@ -1496,6 +1503,7 @@
     if(!response.ok || !result.ok){
       const error = new Error(result.error || 'Request failed');
       error.status = response.status;
+      error.payload = result;
       throw error;
     }
     return result;
@@ -1530,11 +1538,14 @@
     setStatus('Publishing to spreadsheet…');
     try{
       const result = await postJson(API_PUBLISH,{record});
-      const time = new Date().toLocaleTimeString('en-AU',{hour:'numeric',minute:'2-digit'});
-      setStatus(`Published ${record.rep} for ${record.date} at ${time}.`,'success');
+      const weekly = result.results?.weekly;
+      const daily = result.results?.daily;
+      setStatus(`Weekly report: ${weekly?.ok ? weekly.mode : 'failed'}; Daily log: ${daily?.ok ? daily.mode : 'failed'}. ${record.rep}, ${record.date}.`,weekly?.ok && daily?.ok ? 'success' : 'error');
     }catch(error){
       if(error.status === 401) requestGatePasscode('Your access needs to be verified again. Enter the team passcode to continue.');
-      setStatus(`Publish failed: ${error.message}`,'error');
+      const results = error.payload?.results;
+      if(results) setStatus(`Weekly report: ${results.weekly?.ok ? results.weekly.mode : `failed (${results.weekly?.error || 'error'})`}; Daily log: ${results.daily?.ok ? results.daily.mode : `failed (${results.daily?.error || 'error'})`}.`, 'error');
+      else setStatus(`Publish failed: ${error.message}`,'error');
     }finally{
       setBusy(button,false,'Publish Stats');
     }
@@ -1565,9 +1576,24 @@
   const MONTHS_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   const updateDateChip = () => {
     const today = repToday();
+    const input = byId('reportDate');
+    if (input && !input.value) {
+      const current = repTodayForInput();
+      input.value = current;
+    }
     const [day, month, year] = today.date.split('/');
-    byId('dateChip').textContent = `${today.weekday}, ${Number(day)} ${MONTHS_SHORT[Number(month) - 1]} ${year}`;
+    byId('dateChip').setAttribute('aria-label', `Report date ${today.weekday}, ${Number(day)} ${MONTHS_SHORT[Number(month) - 1]} ${year}`);
   };
+
+  const repTodayForInput = () => {
+    const rep = repList.find(r => r.name === byId('repName').value);
+    const timeZone = rep ? rep.timezone : 'Australia/Perth';
+    const parts = new Intl.DateTimeFormat('en-CA',{timeZone,year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date());
+    const part = type => parts.find(p => p.type === type).value;
+    return `${part('year')}-${part('month')}-${part('day')}`;
+  };
+
+  byId('reportDate').addEventListener('change', updateDateChip);
 
   // Rep list: shared, from /api/reps. Only the chosen name is remembered on this device.
   const REP_KEY = 'drapsRepName';
@@ -1705,6 +1731,7 @@
   byId('repName').addEventListener('change',() => {
     saveRepName(byId('repName').value);
     updateStartButton();
+    byId('reportDate').value = repTodayForInput();
     updateDateChip();
     update();
   });
@@ -1724,6 +1751,7 @@
 
   // ----- Admin panel. The PIN is held only while the panel is open. -----
   const ADMIN_STATES = ['NSW','ACT','VIC','QLD','SA','WA','TAS','NT'];
+  const REP_TIERS = (document.querySelector('meta[name="rep-tiers"]')?.content || 'FC,FR,PS').split(',').map(t => t.trim()).filter(Boolean);
   const adminModal = byId('adminModal');
   const pinBoxes = Array.from(document.querySelectorAll('.pin-box'));
   let adminPin = '';
@@ -1879,13 +1907,26 @@
     nameCell.append(nameInput);
     const stateCell = document.createElement('td');
     stateCell.append(stateSelect);
+    const tierCell = document.createElement('td');
+    const tierChoices = document.createElement('div');
+    tierChoices.className = 'tier-choices';
+    REP_TIERS.forEach(tier => {
+      const label = document.createElement('label');
+      const checkbox = document.createElement('input');
+      checkbox.type = 'checkbox'; checkbox.value = tier; checkbox.checked = (rep.tiers || []).includes(tier);
+      checkbox.setAttribute('aria-label', `${tier} tier`);
+      label.append(checkbox, document.createTextNode(tier)); tierChoices.append(label);
+    });
+    tierCell.append(tierChoices);
     const actions = document.createElement('td');
     actions.className = 'actions';
     actions.append(
-      makeButton('Save', 'btn-small primary', () => runAdminAction({action:'update', row: rep.row, name: nameInput.value, state: stateSelect.value}, 'Saved.')),
+      makeButton('Save', 'btn-small primary', async () => {
+        await runAdminAction({action:'update', row: rep.row, name: nameInput.value, state: stateSelect.value, tiers: Array.from(tierChoices.querySelectorAll('input:checked')).map(input => input.value)}, 'Saved.');
+      }),
       makeButton('Cancel', 'btn-small', () => { editingRow = null; renderAdminReps(); })
     );
-    return [nameCell, stateCell, makeCell(rep.active ? 'Active' : 'Removed'), actions];
+    return [nameCell, stateCell, tierCell, makeCell(rep.active ? 'Active' : 'Removed'), actions];
   };
 
   const renderAdminReps = () => {
@@ -1894,7 +1935,7 @@
     if (!adminReps.length) {
       const row = document.createElement('tr');
       const cell = makeCell('No reps yet. Add one below.', 'empty');
-      cell.colSpan = 4;
+      cell.colSpan = 5;
       row.append(cell);
       tbody.append(row);
       return;
@@ -1928,7 +1969,7 @@
               : makeButton('Restore', 'btn-small', () => restoreRep(rep))
           );
         }
-        row.append(makeCell(rep.name, 'name'), makeCell(rep.state), status, actions);
+        row.append(makeCell(rep.name, 'name'), makeCell(rep.state), makeCell((rep.tiers || []).join(', ') || '—'), status, actions);
       }
       tbody.append(row);
     });

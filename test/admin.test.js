@@ -4,7 +4,7 @@ import { checkAdminPin, MAX_FAILED_ATTEMPTS, LOCK_MS } from '../lib/admin.js';
 import { saveRep, setRepActive, listAllReps, REPS_TAB } from '../lib/reps-store.js';
 import { handleAdmin } from '../api/admin.js';
 
-const HEADER = ['Name', 'State', 'Timezone', 'Active', 'Added'];
+const HEADER = ['Name', 'State', 'Timezone', 'Active', 'Added', 'Tiers'];
 
 function fakeSheets(values) {
   const calls = { update: [] };
@@ -60,11 +60,11 @@ test('listAllReps includes removed reps with their sheet row numbers', async () 
 });
 
 test('saveRep renames a row in place and keeps its active flag', async () => {
-  const sheets = fakeSheets([HEADER, ['Jaide', 'WA', 'Australia/Perth', 'TRUE', '16/11/2026']]);
-  const rep = await saveRep(sheets, 'id', { row: 2, name: 'Jaide Lee', state: 'qld' });
+  const sheets = fakeSheets([HEADER, ['Jaide', 'WA', 'Australia/Perth', 'TRUE', '16/11/2026', 'FC']]);
+  const rep = await saveRep(sheets, 'id', { row: 2, name: 'Jaide Lee', state: 'qld', tiers: ['FC', 'PS'] });
   assert.equal(rep.timezone, 'Australia/Brisbane');
-  assert.deepEqual(sheets.calls.update[0].requestBody.values, [['Jaide Lee', 'QLD', 'Australia/Brisbane', 'TRUE']]);
-  assert.equal(sheets.calls.update[0].range, `'${REPS_TAB}'!A2:D2`);
+  assert.deepEqual(sheets.calls.update[0].requestBody.values, [['Jaide Lee', 'QLD', 'Australia/Brisbane', 'TRUE', '16/11/2026', 'FC, PS']]);
+  assert.equal(sheets.calls.update[0].range, `'${REPS_TAB}'!A2:F2`);
 });
 
 test('saveRep refuses a name another row already uses', async () => {

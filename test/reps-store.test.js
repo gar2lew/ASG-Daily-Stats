@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { listReps, addRep, REPS_TAB } from '../lib/reps-store.js';
 
-const HEADER = ['Name', 'State', 'Timezone', 'Active', 'Added'];
+const HEADER = ['Name', 'State', 'Timezone', 'Active', 'Added', 'Tiers'];
 
 function fakeSheets({ tabs = [REPS_TAB], values } = {}) {
   const calls = { batchUpdate: [], update: [], append: [] };
@@ -47,7 +47,7 @@ test('addRep appends a new rep as a row', async () => {
   const result = await addRep(sheets, 'sheet-id', JOE, '16/11/2026');
   assert.equal(result.created, true);
   assert.deepEqual(result.rep, { name: 'Joe Smith', state: 'QLD', timezone: 'Australia/Brisbane', active: true, added: '16/11/2026' });
-  assert.deepEqual(sheets.calls.append[0].requestBody.values, [['Joe Smith', 'QLD', 'Australia/Brisbane', 'TRUE', '16/11/2026']]);
+  assert.deepEqual(sheets.calls.append[0].requestBody.values, [['Joe Smith', 'QLD', 'Australia/Brisbane', 'TRUE', '16/11/2026', '']]);
 });
 
 test('addRep does not duplicate a name differing only in case', async () => {

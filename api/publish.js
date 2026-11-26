@@ -20,10 +20,15 @@ export default async function handler(req, res) {
     const { record } = checked;
 
     const sheets = getSheetsClient();
-    const approvalMode = await publishApproval(sheets, process.env.WEEKLY_SHEET_ID, record);
-    const logMode = await publishLog(sheets, process.env.SHEET_ID, record);
-
-    return res.status(200).json({ ok: true, mode: approvalMode, log: logMode });
+    const result = { weekly: { ok: false }, daily: { ok: false } };
+    try {
+      result.weekly = { ok: true, mode: await publishApproval(sheets, process.env.WEEKLY_SHEET_ID, record) };
+    } catch (error) { result.weekly.error = error.message; }
+    try {
+      result.daily = { ok: true, mode: await publishLog(sheets, process.env.SHEET_ID, record) };
+    } catch (error) { result.daily.error = error.message; }
+    const ok = result.weekly.ok && result.daily.ok;
+    return res.status(ok ? 200 : 502).json({ ok, results: result, error: ok ? undefined : 'One or more spreadsheet destinations could not be updated.' });
   } catch (error) {
     console.error('publish failed', error);
     return res.status(500).json({ ok: false, error: 'Could not write to the spreadsheet. Check the server logs.' });

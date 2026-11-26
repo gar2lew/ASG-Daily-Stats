@@ -1,7 +1,7 @@
 import { assertEnv } from '../lib/draps.js';
 import { checkAdminPin } from '../lib/admin.js';
 import { validateRepInput, localDateParts } from '../lib/reps.js';
-import { listAllReps, addRep, saveRep, setRepActive } from '../lib/reps-store.js';
+import { listAllReps, addRep, saveRep, setRepActive, saveRepTiers } from '../lib/reps-store.js';
 import { getSheetsClient } from '../lib/sheets.js';
 
 const defaultDeps = {
@@ -12,7 +12,7 @@ const defaultDeps = {
   store: { listAllReps, addRep, saveRep, setRepActive },
 };
 
-const publicRep = rep => ({ row: rep.row, name: rep.name, state: rep.state, timezone: rep.timezone, active: rep.active });
+const publicRep = rep => ({ row: rep.row, name: rep.name, state: rep.state, timezone: rep.timezone, active: rep.active, tiers: rep.tiers || [] });
 
 // Every request sends the admin PIN in the x-admin-pin header.
 // GET  /api/admin                          -> { ok, reps: [{ row, name, state, timezone, active }] }
@@ -60,7 +60,13 @@ export async function handleAdmin(req, res, deps = defaultDeps) {
 
     if (body.action === 'update') {
       needsRow();
-      const rep = await deps.store.saveRep(sheets, id, { row, name: body.name, state: body.state });
+      const rep = await deps.store.saveRep(sheets, id, { row, name: body.name, state: body.state, tiers: body.tiers });
+      return res.status(200).json({ ok: true, rep: publicRep(rep) });
+    }
+
+    if (body.action === 'tiers') {
+      needsRow();
+      const rep = await deps.store.saveRepTiers(sheets, id, { row, tiers: body.tiers });
       return res.status(200).json({ ok: true, rep: publicRep(rep) });
     }
 
