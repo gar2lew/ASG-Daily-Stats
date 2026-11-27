@@ -13,21 +13,28 @@ export default async function handler(req, res) {
   if (!auth.ok) return res.status(auth.status).json({ ok: false, error: auth.error });
 
   try {
-    assertEnv(['GOOGLE_SERVICE_ACCOUNT_JSON', 'SHEET_ID', 'WEEKLY_SHEET_ID']);
-
     const checked = validateRecord(req.body?.record);
     if (!checked.ok) return res.status(400).json(checked);
     const { record } = checked;
+    const target = req.body?.target;
+    if (target && !['weekly', 'daily'].includes(target)) return res.status(400).json({ ok: false, error: 'Target must be weekly or daily' });
+    assertEnv(['GOOGLE_SERVICE_ACCOUNT_JSON']);
 
     const sheets = getSheetsClient();
     const result = { weekly: { ok: false }, daily: { ok: false } };
-    try {
-      result.weekly = { ok: true, mode: await publishApproval(sheets, process.env.WEEKLY_SHEET_ID, record) };
-    } catch (error) { result.weekly.error = error.message; }
-    try {
-      result.daily = { ok: true, mode: await publishLog(sheets, process.env.SHEET_ID, record) };
-    } catch (error) { result.daily.error = error.message; }
-    const ok = result.weekly.ok && result.daily.ok;
+    if (!target || target === 'weekly') {
+      try {
+        assertEnv(['WEEKLY_SHEET_ID']);
+        result.weekly = { ok: true, mode: await publishApproval(sheets, process.env.WEEKLY_SHEET_ID, record) };
+      } catch (error) { result.weekly.error = error.message; }
+    } else result.weekly = { ok: null, skipped: true };
+    if (!target || target === 'daily') {
+      try {
+        assertEnv(['SHEET_ID']);
+        result.daily = { ok: true, mode: await publishLog(sheets, process.env.SHEET_ID, record) };
+      } catch (error) { result.daily.error = error.message; }
+    } else result.daily = { ok: null, skipped: true };
+    const ok = (result.weekly.ok === true || result.weekly.skipped) && (result.daily.ok === true || result.daily.skipped);
     return res.status(ok ? 200 : 502).json({ ok, results: result, error: ok ? undefined : 'One or more spreadsheet destinations could not be updated.' });
   } catch (error) {
     console.error('publish failed', error);

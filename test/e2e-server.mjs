@@ -8,8 +8,8 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 const ROOT = fileURLToPath(new URL('../', import.meta.url));
 const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.png': 'image/png' };
 const REPS = [
-  { name: 'Jaide', state: 'WA', timezone: 'Australia/Perth' },
-  { name: 'Joe Smith', state: 'QLD', timezone: 'Australia/Brisbane' },
+  { name: 'Jaide', state: 'WA', timezone: 'Australia/Perth', tiers: ['FC', 'FR', 'PS'] },
+  { name: 'Joe Smith', state: 'QLD', timezone: 'Australia/Brisbane', tiers: ['FC', 'SMSF'] },
 ];
 
 const json = (res, code, body) => {
@@ -21,7 +21,16 @@ export function createE2EServer() {
   return createServer(async (req, res) => {
   const url = new URL(req.url, 'http://localhost');
   if (url.pathname === '/api/reps' && req.method === 'GET') return json(res, 200, { ok: true, reps: REPS });
-  if (url.pathname === '/api/publish' || url.pathname === '/api/email') return json(res, 200, { ok: true, mode: 'added' });
+  if (url.pathname === '/api/publish' && req.method === 'POST') {
+    let body = '';
+    for await (const chunk of req) body += chunk;
+    const target = JSON.parse(body || '{}').target;
+    return json(res, 200, { ok: true, results: {
+      weekly: target === 'daily' ? { ok: null, skipped: true } : { ok: true, mode: 'added' },
+      daily: target === 'weekly' ? { ok: null, skipped: true } : { ok: true, mode: 'added' },
+    } });
+  }
+  if (url.pathname === '/api/email') return json(res, 200, { ok: true, mode: 'sent' });
   if (url.pathname.startsWith('/api/')) return json(res, 404, { ok: false, error: 'Not stubbed' });
 
   const rel = url.pathname === '/' ? 'index.html' : url.pathname.slice(1);

@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="rep-tiers" content="FC, FR, PS, SMSF, CONTRACT, RECRUITMENT">
 <title>Daily Stats - ASG</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -45,9 +46,9 @@
   }
 
   .topbar-inner{
-    max-width:1180px;
+    max-width:1360px;
     margin:0 auto;
-    padding:16px 22px;
+    padding:9px 22px;
     display:flex;
     align-items:center;
     justify-content:space-between;
@@ -81,6 +82,11 @@
     font:400 12px 'IBM Plex Mono',monospace;
   }
   .date-chip input{margin-left:8px;padding:3px 6px;border:1px solid #52627b;border-radius:6px;background:#101a2b;color:#f5f1e8;color-scheme:dark;font:inherit}
+  .backfill-flag{margin-left:8px;padding:3px 7px;border-radius:99px;background:#f4e6bd;color:#664b13;font:700 10px 'IBM Plex Mono',monospace;text-transform:uppercase}
+  .brand-title{display:flex;flex-direction:column;gap:3px}
+  .rep-context{display:flex;align-items:center;gap:8px;color:#c8cfdb;font:400 11px 'IBM Plex Mono',monospace}
+  .rep-context strong{color:#fff;font-weight:600}
+  .rep-context #headerTierSummary{color:#d8bd7a}
 
   .btn{
     padding:11px 20px;
@@ -125,9 +131,9 @@
   }
 
   .app{
-    max-width:1180px;
+    max-width:1360px;
     margin:0 auto;
-    padding:26px 22px 70px;
+    padding:18px 22px 36px;
   }
 
   .rep-card{
@@ -233,27 +239,29 @@
   }
 
   .card{
-    padding:18px 20px;
+    padding:16px 18px;
     border:1px solid var(--line);
-    border-radius:16px;
-    background:var(--card);
-    box-shadow:0 2px 10px -6px rgba(22,38,62,.18);
+    border-radius:12px;
+    background:#fff;
+    box-shadow:0 1px 4px -2px rgba(22,38,62,.15);
     transition:transform .2s ease,box-shadow .25s ease,border-color .25s;
     animation:rise .55s ease both;
     animation-delay:var(--d,0s);
   }
 
   .card:hover{
-    transform:translateY(-2px);
+    transform:translateY(-1px);
     border-color:var(--line2);
-    box-shadow:0 12px 30px -18px rgba(22,38,62,.35);
+    box-shadow:0 8px 20px -16px rgba(22,38,62,.28);
   }
 
   .brand{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
-  .brand-logo{height:44px;width:auto;display:block}
+  .brand-logo{height:34px;width:auto;display:block}
 
-  #pipelines{display:flex;flex-direction:column;gap:16px}
-  .calls-stack{display:flex;flex-direction:column;gap:16px}
+  #pipelines{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;align-items:start}
+  #pipelines .card{min-width:0;padding:15px}
+  .calls-stack{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+  .calls-stack .calls{grid-column:1/-1}
   .card.pipe{--acc:var(--gold)}
 
   .card.tally,.card.fc{--acc:var(--gold)}
@@ -301,6 +309,14 @@
 
   .row:hover{background:#f2ecdf}
   .row + .row{border-top:1px dashed var(--line)}
+  .tally-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}
+  .tally-grid .row{display:flex;flex-direction:column;gap:8px;padding:10px 6px;border:1px solid var(--line);background:#f7f4ed}
+  .tally-grid .row + .row{border-top:1px solid var(--line)}
+  .tally-grid .row:hover{background:#f2ecdf}
+  .tally-grid .step-group{gap:3px}
+  .calls .rows-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:14px}
+  .calls .rows-grid .row{min-width:0;gap:5px}
+  .calls .rows-grid .row-label{font-size:10px;letter-spacing:.06em}
 
   .row-label{
     color:var(--muted);
@@ -316,8 +332,7 @@
   }
 
   .step{
-    width:38px;
-    height:38px;
+    width:30px;height:30px;
     border:1px solid var(--line);
     border-radius:12px;
     background:#fff;
@@ -325,7 +340,7 @@
     cursor:pointer;
     line-height:1;
     font-weight:700;
-    font-size:17px;
+    font-size:15px;
     box-shadow:0 2px 5px -2px rgba(22,38,62,.25);
     transition:all .15s ease;
   }
@@ -339,16 +354,14 @@
   .step:active{transform:scale(.9)}
 
   .num{
-    width:82px;
-    min-height:42px;
-    padding:4px 6px;
+    width:34px;min-height:30px;padding:2px;
     border:1px solid transparent;
     border-radius:9px;
     background:transparent;
     color:var(--acc);
     text-align:center;
     outline:none;
-    font:800 26px 'Archivo',sans-serif;
+    font:700 16px 'Archivo',sans-serif;
     appearance:textfield;
     -moz-appearance:textfield;
   }
@@ -369,9 +382,7 @@
     display:flex;
     align-items:center;
     justify-content:center;
-    width:60px;
-    height:48px;
-    border-radius:12px;
+    width:36px;height:30px;border-radius:8px;
     background:var(--gold2);
     box-shadow:0 4px 12px -5px rgba(179,145,63,.8);
   }
@@ -384,7 +395,7 @@
     text-align:center;
     text-transform:uppercase;
     outline:none;
-    font:800 21px 'Archivo',sans-serif;
+    font:800 17px 'Archivo',sans-serif;
   }
 
   .section-note{margin-top:12px}
@@ -464,14 +475,13 @@
   }
 
   .report{
-    min-height:365px;
-    padding:18px 20px;
+    min-height:0;max-height:calc(100vh - 260px);overflow:auto;padding:14px 16px;
     border:1px solid #e6dcc6;
     border-radius:12px;
     background:var(--inset);
     color:var(--navy2);
     white-space:pre-wrap;
-    font:500 14.5px/1.75 'IBM Plex Mono',monospace;
+    font:500 12px/1.65 'IBM Plex Mono',monospace;
   }
 
   .hint{
@@ -536,6 +546,32 @@
     flex-wrap:wrap;
     border-left:5px solid var(--navy2);
   }
+  .action-bar{position:static;z-index:auto;margin-top:14px;padding:12px;border-left-width:3px;box-shadow:none;backdrop-filter:none}
+  .action-progress{display:flex;gap:12px;flex-wrap:wrap;margin-top:8px;color:var(--muted);font:500 11px 'IBM Plex Mono',monospace}
+  .action-progress [data-state="done"]{color:var(--green)}
+  .retry-actions{display:flex;gap:6px;margin-top:6px}
+  .retry-actions[hidden]{display:none}
+  .retry-actions button{border:0;background:none;padding:3px 6px;color:#8c3a2d;text-decoration:underline;cursor:pointer;font:600 11px 'IBM Plex Sans',sans-serif}
+  .section-nav{display:flex;gap:7px;overflow-x:auto;padding:8px 2px 12px;scrollbar-width:thin}
+  .section-nav[hidden]{display:none}
+  .section-nav[role="tablist"]{display:flex;align-items:center;gap:4px;width:max-content;max-width:100%;padding:4px;border:1px solid var(--line);border-radius:999px;background:#f1eee6}
+  .section-nav[hidden]{display:none!important}
+  .section-nav .filter-tab{flex:none;padding:8px 13px;border:0;border-radius:999px;background:transparent;color:var(--muted);font:600 12px 'IBM Plex Sans',sans-serif;cursor:pointer;white-space:nowrap}
+  .section-nav .filter-tab[aria-selected="true"]{background:var(--navy);color:#fff;box-shadow:0 1px 3px rgba(14,26,47,.22)}
+  .workspace-toolbar{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:16px}
+  .summary-strip{display:grid;grid-template-columns:repeat(4,minmax(96px,1fr));gap:8px;flex:1;max-width:590px}
+  .summary-item{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:9px 12px;border:1px solid var(--line);border-radius:9px;background:#fff}
+  .summary-label{color:var(--muted);font:600 10px 'IBM Plex Mono',monospace;text-transform:uppercase;letter-spacing:.06em}
+  .summary-value{color:var(--navy);font:700 16px 'Archivo',sans-serif;font-variant-numeric:tabular-nums}
+  [data-filter-section][hidden]{display:none!important}
+  .section-nav a{flex:none;padding:8px 12px;border:1px solid var(--line);border-radius:99px;background:#fff;color:var(--navy2);font-size:12px;font-weight:600;text-decoration:none}
+  .section-nav a:hover,.section-nav a:focus-visible{border-color:var(--gold);background:#fffaf0}
+  .card-toggle{margin-left:auto;border:0;background:transparent;color:var(--muted);font:600 11px 'IBM Plex Sans',sans-serif;cursor:pointer;padding:6px}
+  .card.is-collapsed>:not(.card-head){display:none}
+  .card.is-collapsed .card-head{margin-bottom:0}
+  .rep-tier-summary{margin:-8px 0 12px;color:var(--green);font:600 11px 'IBM Plex Mono',monospace}
+  .workflow-meta{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .workflow-meta .card-tag{margin:0;color:var(--muted);font:500 11px 'IBM Plex Mono',monospace}
 
   .action-title{
     color:var(--navy2);
@@ -559,27 +595,50 @@
     gap:10px;
     flex-wrap:wrap;
   }
+  .output-head-actions{margin-left:auto;display:flex;align-items:center;gap:8px}
+  .output-head-actions .card-tag{margin:0}
+  .output-head-actions .copy-output{width:auto;margin:0;padding:7px 12px;font-size:11px}
 
   @keyframes rise{
     from{opacity:0;transform:translateY(16px)}
     to{opacity:1;transform:translateY(0)}
   }
 
-  @media(max-width:920px){
+  @media(max-width:720px){
     .grid{grid-template-columns:1fr}
     .col-right{position:static}
+    .report{max-height:55vh}
+    #pipelines{grid-template-columns:repeat(2,minmax(0,1fr))}
+  }
+  @media(max-width:520px){
+    #pipelines,.calls-stack{grid-template-columns:1fr}
+    .calls-stack .calls{grid-column:auto}
+    .calls .rows-grid{grid-template-columns:1fr}
+    .tally-grid{grid-template-columns:repeat(5,minmax(48px,1fr));gap:5px}
+    .tally-grid .row{padding:8px 2px}
+    .tally-grid .step{width:25px;height:28px}
+    .tally-grid .num{width:24px}
+    .output-head-actions .card-tag{display:none}
   }
 
   @media(max-width:560px){
     .topbar-inner,.app{padding-left:14px;padding-right:14px}
+    .workspace-toolbar{align-items:stretch}
+    .summary-strip{max-width:none;grid-template-columns:repeat(2,minmax(0,1fr))}
+    .section-nav[role="tablist"]{width:100%;overflow-x:auto;justify-content:flex-start}
+    .section-nav .filter-tab{padding:8px 11px}
     .head-right{width:100%}
     .date-chip{margin-right:auto}
     .rep-card{align-items:flex-start}
+    .rep-context{font-size:10px}
     .card-tag{display:none}
     .row{padding-left:2px;padding-right:2px}
-    .step{width:42px;height:42px}
-    .num{width:72px}
+    .step{width:30px;height:30px}
+    .num{width:34px}
     .stats{grid-template-columns:repeat(2,1fr)}
+    .action-bar{margin:12px 0 0;padding:10px}
+    .action-bar .action-buttons{width:100%}
+    .action-bar .action-buttons .btn{flex:1;padding:10px 12px}
   }
   /* ASG landing screen: shared split layout, navy brand panel and ivory form panel. */
   body[data-view="gate"] .topbar,
@@ -728,8 +787,8 @@
   @media (max-width:560px){.add-fields{grid-template-columns:1fr}.pin-box{width:52px;height:62px}.modal-card{padding:22px 20px}}
 
   /* Polish pass */
-  .step{width:44px;height:44px}
-  .row-label{font-size:13px}
+  .step{width:30px;height:30px}
+  .row-label{font-size:11px}
   .num.is-zero{color:#b7b0a1}
   .report .rl-line{white-space:pre-wrap}
   .report .rl-h{font-family:'Archivo',sans-serif;font-weight:800;color:var(--navy)}
@@ -823,12 +882,15 @@
   <div class="topbar-inner">
     <div class="brand">
       <img class="brand-logo" src="/assets/asg-logo.png" alt="ASG Amplify Solutions Group" width="176" height="44">
-      <h1>Daily Stats <span class="asg">- ASG</span></h1>
+      <div class="brand-title">
+        <h1>Daily Stats <span class="asg">- ASG</span></h1>
+        <div class="rep-context"><span>Rep: <strong id="activeRepName">Choose a rep</strong></span><span id="headerTierSummary"></span></div>
+      </div>
     </div>
     <div class="head-right">
-      <label class="date-chip" id="dateChip">Report date<input id="reportDate" type="date" aria-label="Report date"></label>
+      <label class="date-chip" id="dateChip">Report date<input id="reportDate" type="date" aria-label="Report date"><span class="backfill-flag" id="backfillFlag" hidden>Backfill</span></label>
       <button class="btn gold" id="copyBtn" type="button">Copy Report</button>
-      <button class="btn ghost" id="resetBtn" type="button">New Day ⟲</button>
+      <button class="btn ghost" id="resetBtn" type="button">Clear this report</button>
       <button class="btn ghost" id="changeRepBtn" type="button" hidden>Change rep</button>
       <button class="btn ghost" id="adminBtn" type="button">Admin</button>
     </div>
@@ -881,16 +943,33 @@
 
 <main class="app">
 
+  <div class="workspace-toolbar">
+    <nav class="section-nav" id="sectionNav" role="tablist" aria-label="Activity sections" hidden>
+      <button class="filter-tab" type="button" role="tab" data-filter="all" aria-selected="true" tabindex="0">All sections</button>
+      <button class="filter-tab" type="button" role="tab" data-filter="tally" aria-selected="false" tabindex="-1">Tally</button>
+      <button class="filter-tab" type="button" role="tab" data-filter="pipelines" aria-selected="false" tabindex="-1">Pipelines</button>
+      <button class="filter-tab" type="button" role="tab" data-filter="calls" aria-selected="false" tabindex="-1">Calls</button>
+      <button class="filter-tab" type="button" role="tab" data-filter="followup" aria-selected="false" tabindex="-1">Follow-up</button>
+      <button class="filter-tab" type="button" role="tab" data-filter="recruitment" aria-selected="false" tabindex="-1">Recruitment</button>
+    </nav>
+    <section class="summary-strip" aria-label="Current report summary">
+      <div class="summary-item"><span class="summary-label">Tally</span><span id="summaryTally" class="summary-value">0</span></div>
+      <div class="summary-item"><span class="summary-label">Calls</span><span id="summaryCalls" class="summary-value">0</span></div>
+      <div class="summary-item"><span class="summary-label">Appointments</span><span id="summaryAppointments" class="summary-value">0</span></div>
+      <div class="summary-item"><span class="summary-label">Sold</span><span id="summarySold" class="summary-value">0</span></div>
+    </section>
+  </div>
+
   <div class="grid">
     <div class="col-left">
-      <section class="card tally" style="--d:.05s">
+      <section class="card tally" id="tallySection" data-filter-section="tally" style="--d:.05s">
         <div class="card-head">
           <span class="dot"></span>
           <span class="card-title">Tally</span>
           <span class="card-tag">tap letters to rename</span>
         </div>
 
-        <div class="row">
+        <div class="tally-grid"><div class="row">
           <span class="letter-badge"><input class="letter-input" id="labelD" maxlength="3" value="D" aria-label="First tally label"></span>
           <span class="step-group">
             <button class="step" type="button" data-target="valueD" data-delta="-1">−</button>
@@ -934,27 +1013,30 @@
             <button class="step" type="button" data-target="valueS" data-delta="1">+</button>
           </span>
         </div>
+        </div>
         <div class="note-slot" data-group="tallyNote" data-label="Tally note" data-placeholder="Add a note about today's tally"></div>
       </section>
 
-      <div id="pipelines"></div>
+      <div id="pipelines" data-filter-section="pipelines" aria-label="Rep pipeline sections"></div>
 
       <div class="calls-stack">
-      <section class="card calls" style="--d:.1s">
+      <section class="card calls" id="callsSection" data-filter-section="calls" style="--d:.1s">
         <div class="card-head">
           <span class="dot"></span>
           <span class="card-title">Calls</span>
           <span class="card-tag">daily activity</span>
         </div>
 
+        <div class="rows-grid">
         <div class="row"><span class="row-label">Lead Calls</span><span class="step-group"><button class="step" type="button" data-target="leadCalls" data-delta="-1">−</button><input class="num" id="leadCalls" type="number" min="0" max="9999" step="1" value="0"><button class="step" type="button" data-target="leadCalls" data-delta="1">+</button></span></div>
         <div class="row"><span class="row-label">First Consult Calls</span><span class="step-group"><button class="step" type="button" data-target="firstConsultCalls" data-delta="-1">−</button><input class="num" id="firstConsultCalls" type="number" min="0" max="9999" step="1" value="0"><button class="step" type="button" data-target="firstConsultCalls" data-delta="1">+</button></span></div>
         <div class="row"><span class="row-label">Finance Run Calls</span><span class="step-group"><button class="step" type="button" data-target="financeRunCalls" data-delta="-1">−</button><input class="num" id="financeRunCalls" type="number" min="0" max="9999" step="1" value="0"><button class="step" type="button" data-target="financeRunCalls" data-delta="1">+</button></span></div>
         <div class="row"><span class="row-label">Coffee Run Calls</span><span class="step-group"><button class="step" type="button" data-target="coffeeRunCalls" data-delta="-1">−</button><input class="num" id="coffeeRunCalls" type="number" min="0" max="9999" step="1" value="0"><button class="step" type="button" data-target="coffeeRunCalls" data-delta="1">+</button></span></div>
+        </div>
         <div class="note-slot" data-group="callsNote" data-label="Calls note" data-placeholder="Add a note about calls"></div>
       </section>
 
-      <section class="card fc" style="--d:.15s">
+      <section class="card fc" id="followupSection" data-filter-section="followup" style="--d:.15s">
         <div class="card-head">
           <span class="dot"></span>
           <span class="card-title">Follow Up FC's</span>
@@ -991,7 +1073,7 @@
         <div class="note-slot" data-group="fcNote" data-label="Follow Up FC's note" data-placeholder="e.g. 5 are FIFO, so callbacks"></div>
       </section>
 
-      <section class="card rec" style="--d:.2s">
+      <section class="card rec" id="recruitmentSection" data-filter-section="recruitment" style="--d:.2s">
         <div class="card-head">
           <span class="dot"></span>
           <span class="card-title">Recruitment</span>
@@ -1030,16 +1112,14 @@
     </div>
 
     <aside class="col-right">
-      <section class="card preview" style="--d:.25s">
+      <section class="card preview" id="outputSection" style="--d:.25s">
         <div class="card-head">
           <span class="live-dot"></span>
           <span class="card-title">Output</span>
-          <span class="card-tag">live · exact format</span>
+          <div class="output-head-actions"><span class="card-tag">live · exact format</span><button class="btn gold copy-output" id="copyOutputBtn" type="button">Copy Report</button></div>
         </div>
         <div class="report" id="report"></div>
         <div class="hint">Copy and paste directly into WhatsApp. The same layout is used every day.</div>
-      </section>
-      <button class="btn gold copy-output" id="copyOutputBtn" type="button">Copy to clipboard</button>
 
       <div class="stats">
         <div class="stat"><div class="v" id="totalDials">0</div><div class="l">Total Calls</div></div>
@@ -1052,8 +1132,10 @@
 
   <section class="card action-bar" style="--d:.3s">
     <div>
-      <div class="action-title">End of Day</div>
+      <div class="workflow-meta"><div class="action-title">Report workflow</div><span id="draftState" class="card-tag">Draft saved on this device</span></div>
       <div class="action-status" id="actionStatus" role="status" aria-live="polite"></div>
+      <div class="action-progress" aria-label="Report progress"><span id="progressDraft" data-state="done">● Draft</span><span id="progressPublish">○ Spreadsheet</span><span id="progressEmail">○ Email</span></div>
+      <div class="retry-actions" id="retryActions" hidden><button id="retryWeeklyBtn" type="button" hidden>Retry weekly report</button><button id="retryDailyBtn" type="button" hidden>Retry daily log</button></div>
     </div>
     <div class="action-buttons">
       <button class="btn dark" id="publishBtn" type="button">Publish Stats</button>
@@ -1106,6 +1188,7 @@
 
   // Display order on the input page. Column order in the sheet stays as PIPELINES lists it.
   const PIPELINE_DISPLAY = ['fcPipe','financePipe','property','smsf','contract','recPipe'];
+  const PIPELINE_TIERS = { fcPipe:'FC', financePipe:'FR', property:'PS', smsf:'SMSF', contract:'CONTRACT', recPipe:'RECRUITMENT' };
 
   const pipelineInputId = (card, field) => `pipe_${card}_${field}`;  // matches pipelineKey() in lib/draps.js
   const noteIds = ['tallyNote','callsNote','fcNote','recNote'];
@@ -1202,7 +1285,7 @@
     }).join('');
     const noteId = `pipe_${card.key}_note`;
     noteIds.push(noteId);
-    return `<section class="card pipe"><div class="card-head"><span class="dot"></span>` +
+    return `<section class="card pipe" id="pipeline-${card.key}" data-tier="${PIPELINE_TIERS[card.key]}"><div class="card-head"><span class="dot"></span>` +
       `<span class="card-title">${card.title}</span></div>${rows}${noteMarkup(noteId,card.title,`Add a note about ${card.title.toLowerCase()}`)}</section>`;
   }).join('');
 
@@ -1211,6 +1294,82 @@
   document.querySelectorAll('.note-slot').forEach(buildNoteGroup);
 
   const byId = id => document.getElementById(id);
+  const sectionNav = byId('sectionNav');
+  const filterTabs = Array.from(sectionNav.querySelectorAll('[role="tab"]'));
+  const setSectionFilter = filter => {
+    filterTabs.forEach((tab,index) => {
+      const selected = tab.dataset.filter === filter;
+      tab.setAttribute('aria-selected',String(selected));
+      tab.tabIndex = selected ? 0 : -1;
+    });
+    document.querySelectorAll('[data-filter-section]').forEach(section => {
+      section.hidden = filter !== 'all' && section.dataset.filterSection !== filter;
+    });
+  };
+  sectionNav.addEventListener('click',event => {
+    const tab = event.target.closest('[role="tab"]');
+    if (tab) setSectionFilter(tab.dataset.filter);
+  });
+  sectionNav.addEventListener('keydown',event => {
+    const tab = event.target.closest('[role="tab"]');
+    if (!tab || !['ArrowLeft','ArrowRight','Home','End'].includes(event.key)) return;
+    event.preventDefault();
+    const current = filterTabs.indexOf(tab);
+    const next = event.key === 'Home' ? 0 : event.key === 'End' ? filterTabs.length - 1 : (current + (event.key === 'ArrowRight' ? 1 : -1) + filterTabs.length) % filterTabs.length;
+    setSectionFilter(filterTabs[next].dataset.filter);
+    filterTabs[next].focus();
+  });
+  document.querySelectorAll('main .card').forEach(card => {
+    const heading = card.querySelector('.card-head');
+    if (!heading) return;
+    const toggle = document.createElement('button');
+    toggle.type = 'button'; toggle.className = 'card-toggle'; toggle.textContent = 'Collapse';
+    toggle.setAttribute('aria-expanded','true');
+    toggle.addEventListener('click',() => {
+      const collapsed = card.classList.toggle('is-collapsed');
+      toggle.textContent = collapsed ? 'Expand' : 'Collapse';
+      toggle.setAttribute('aria-expanded',String(!collapsed));
+    });
+    heading.append(toggle);
+  });
+  let activeDraftKey = '';
+  let draftSaveFailed = false;
+  const draftKeyForSelection = () => {
+    const rep = byId('repName').value.trim();
+    const date = byId('reportDate').value;
+    return rep && date ? `${STORAGE_KEY}:${encodeURIComponent(rep)}:${date}` : '';
+  };
+
+  const resetDraftFields = () => {
+    restoreNotes({});
+    fieldIds.forEach(id => {
+      if (id === 'repName') return;
+      byId(id).value = id.startsWith('label') ? id.slice(5) : '0';
+    });
+  };
+
+  const loadDraftForSelection = () => {
+    activeDraftKey = draftKeyForSelection();
+    resetDraftFields();
+    if (!activeDraftKey) return;
+    try {
+      let saved = JSON.parse(localStorage.getItem(activeDraftKey) || 'null');
+      if (!saved) {
+        const legacy = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
+        if (legacy && legacy.repName === byId('repName').value && !localStorage.getItem(`${STORAGE_KEY}:migrated`)) {
+          saved = legacy;
+          localStorage.setItem(`${STORAGE_KEY}:migrated`, 'true');
+        }
+      }
+      if (!saved || typeof saved !== 'object') return;
+      restoreNotes(saved.__notes);
+      fieldIds.forEach(id => {
+        if (id !== 'repName' && Object.prototype.hasOwnProperty.call(saved,id)) byId(id).value = saved[id];
+      });
+    } catch(error) {
+      console.warn('Saved daily report could not be loaded.',error);
+    }
+  };
 
   const numberValue = id => {
     const value = Number.parseInt(byId(id).value,10);
@@ -1224,27 +1383,14 @@
   };
 
   const save = () => {
+    if (!activeDraftKey) return;
     const data = {};
     fieldIds.forEach(id => {
-      data[id] = byId(id).value;
+      if (id !== 'repName') data[id] = byId(id).value;
     });
     data.__notes = noteValues();
-    localStorage.setItem(STORAGE_KEY,JSON.stringify(data));
-  };
-
-  const load = () => {
-    try{
-      const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
-      if(!saved || typeof saved !== 'object') return;
-      restoreNotes(saved.__notes);
-      fieldIds.forEach(id => {
-        if(Object.prototype.hasOwnProperty.call(saved,id)){
-          byId(id).value = saved[id];
-        }
-      });
-    }catch(error){
-      console.warn('Saved daily stats could not be loaded.',error);
-    }
+    try { localStorage.setItem(activeDraftKey,JSON.stringify(data)); draftSaveFailed = false; }
+    catch(error) { draftSaveFailed = true; console.warn('Daily report draft could not be saved.',error); }
   };
 
   const buildReport = () => {
@@ -1323,11 +1469,23 @@
     byId('totalSpoke').textContent = spoke;
     byId('totalBooked').textContent = booked;
     byId('bookRate').textContent = spoke ? `${Math.round((booked / spoke) * 100)}%` : '–';
+    const tally = ['valueD','valueR','valueA','valueP','valueS'].reduce((sum,id) => sum + numberValue(id),0);
+    const appointments = PIPELINES.reduce((sum,card) => sum + card.fields
+      .filter(([field]) => field === 'appointments')
+      .reduce((cardSum,[field]) => cardSum + numberValue(pipelineInputId(card.key,field)),0),0);
+    const sold = PIPELINES.reduce((sum,card) => sum + card.fields
+      .filter(([field]) => field === 'sold')
+      .reduce((cardSum,[field]) => cardSum + numberValue(pipelineInputId(card.key,field)),0),0);
+    byId('summaryTally').textContent = tally;
+    byId('summaryCalls').textContent = dials;
+    byId('summaryAppointments').textContent = appointments;
+    byId('summarySold').textContent = sold;
   };
 
   const update = () => {
     save();
     render();
+    refreshProgress();
   };
 
   const copyText = async text => {
@@ -1410,10 +1568,11 @@
     },1600);
   };
   byId('copyBtn').addEventListener('click',() => copyReport(byId('copyBtn'),'Copy Report'));
-  byId('copyOutputBtn').addEventListener('click',() => copyReport(byId('copyOutputBtn'),'Copy to clipboard'));
+  byId('copyOutputBtn').addEventListener('click',() => copyReport(byId('copyOutputBtn'),'Copy Report'));
 
   byId('resetBtn').addEventListener('click',() => {
-    if(!window.confirm('Start a new day? All numbers and notes will be cleared. The rep name and tally labels will be kept.')) return;
+    const record = buildRecord();
+    if(!window.confirm(`Clear all numbers and notes for ${record.rep || 'this rep'} on ${record.date}? The rep and tally labels will be kept.`)) return;
 
     numberIds.forEach(id => {
       byId(id).value = '0';
@@ -1428,16 +1587,8 @@
   const repToday = () => {
     const rep = repList.find(r => r.name === byId('repName').value);
     const timeZone = rep ? rep.timezone : 'Australia/Perth';
-    const parts = new Intl.DateTimeFormat('en-AU',{
-      timeZone,
-      weekday:'long',
-      day:'2-digit',
-      month:'2-digit',
-      year:'numeric'
-    }).formatToParts(new Date());
-    const part = type => parts.find(p => p.type === type).value;
     const selected = byId('reportDate')?.value;
-    const date = selected ? new Date(`${selected}T12:00:00`) : new Date();
+    const date = selected ? new Date(`${selected}T12:00:00Z`) : new Date();
     const chosenParts = new Intl.DateTimeFormat('en-AU',{
       timeZone, weekday:'long', day:'2-digit', month:'2-digit', year:'numeric'
     }).formatToParts(date);
@@ -1478,6 +1629,13 @@
     return record;
   };
 
+  let lastPublishedKey = '';
+  let lastPublishedSignature = '';
+  let lastEmailedKey = '';
+  let lastEmailedSignature = '';
+  let pendingRetry = null;
+  const signatureOf = record => JSON.stringify(record);
+
   const PASSCODE_KEY = 'drapsPasscode';
   const readPasscode = () => {
     try { return localStorage.getItem(PASSCODE_KEY) || ''; } catch { return ''; }
@@ -1517,6 +1675,69 @@
     status.dataset.tone = tone;
   };
 
+  const refreshProgress = () => {
+    const signature = signatureOf(buildRecord());
+    const published = activeDraftKey && activeDraftKey === lastPublishedKey && signature === lastPublishedSignature;
+    const emailed = activeDraftKey && activeDraftKey === lastEmailedKey && signature === lastEmailedSignature;
+    byId('progressDraft').dataset.state = 'done';
+    byId('progressPublish').dataset.state = published ? 'done' : '';
+    byId('progressPublish').textContent = `${published ? '●' : '○'} Spreadsheet`;
+    byId('progressEmail').dataset.state = emailed ? 'done' : '';
+    byId('progressEmail').textContent = `${emailed ? '●' : '○'} Email`;
+    byId('draftState').textContent = !activeDraftKey ? 'Choose a rep to start a draft' : draftSaveFailed ? 'Draft could not be saved' : 'Draft saved on this device';
+  };
+
+  const renderRetryActions = results => {
+    const weeklyFailed = results?.weekly?.ok === false;
+    const dailyFailed = results?.daily?.ok === false;
+    byId('retryWeeklyBtn').hidden = !weeklyFailed;
+    byId('retryDailyBtn').hidden = !dailyFailed;
+    byId('retryActions').hidden = !weeklyFailed && !dailyFailed;
+  };
+
+  const publishRecord = async(record, target = null) => {
+    const button = byId('publishBtn');
+    setBusy(button,true,target ? 'Retrying…' : 'Publishing…');
+    setStatus(target ? `Retrying ${target === 'weekly' ? 'weekly report' : 'daily log'}…` : 'Publishing to weekly report and daily log…');
+    try {
+      const response = await postJson(API_PUBLISH,{record,...(target ? {target} : {})});
+      const results = response.results || {};
+      if (target && pendingRetry) pendingRetry.results = {...pendingRetry.results,[target]:results[target]};
+      else pendingRetry = {record,results};
+      renderRetryActions(pendingRetry.results);
+      const weekly = pendingRetry.results.weekly;
+      const daily = pendingRetry.results.daily;
+      if (weekly?.ok && daily?.ok) {
+        lastPublishedKey = draftKeyForSelection();
+        lastPublishedSignature = signatureOf(record);
+        pendingRetry = null;
+        renderRetryActions(null);
+        setStatus(`Published ${record.rep} for ${record.date} to both destinations.`,'success');
+      } else {
+        setStatus(`Weekly report: ${weekly?.ok ? weekly.mode : 'needs retry'}; Daily log: ${daily?.ok ? daily.mode : 'needs retry'} · ${record.rep}, ${record.date}.`,'error');
+      }
+      refreshProgress();
+    } catch(error) {
+      if(error.status === 401) requestGatePasscode('Your access needs to be verified again. Enter the team passcode to continue.');
+      const results = error.payload?.results;
+      if (results) {
+        if (target && pendingRetry) pendingRetry.results = {...pendingRetry.results,[target]:results[target]};
+        else pendingRetry = {record,results};
+        renderRetryActions(pendingRetry.results);
+        const weekly = pendingRetry.results.weekly;
+        const daily = pendingRetry.results.daily;
+        setStatus(`Weekly report: ${weekly?.ok ? weekly.mode : 'failed'}; Daily log: ${daily?.ok ? daily.mode : 'failed'}.`,'error');
+      } else if (error.status !== 401) {
+        pendingRetry = {record,results:{weekly:{ok:false,error:error.message},daily:{ok:false,error:error.message}}};
+        renderRetryActions(pendingRetry.results);
+        setStatus(`Publish failed: ${error.message}. Retry either destination below.`,'error');
+      } else setStatus(`Publish failed: ${error.message}`,'error');
+    } finally {
+      setBusy(button,false,'Publish Stats');
+      refreshProgress();
+    }
+  };
+
   const setBusy = (button,busy,label) => {
     button.disabled = busy;
     button.textContent = label;
@@ -1530,26 +1751,13 @@
   };
 
   byId('publishBtn').addEventListener('click',async() => {
-    const button = byId('publishBtn');
     const record = buildRecord();
     if(!requireRepName(record)) return;
-
-    setBusy(button,true,'Publishing…');
-    setStatus('Publishing to spreadsheet…');
-    try{
-      const result = await postJson(API_PUBLISH,{record});
-      const weekly = result.results?.weekly;
-      const daily = result.results?.daily;
-      setStatus(`Weekly report: ${weekly?.ok ? weekly.mode : 'failed'}; Daily log: ${daily?.ok ? daily.mode : 'failed'}. ${record.rep}, ${record.date}.`,weekly?.ok && daily?.ok ? 'success' : 'error');
-    }catch(error){
-      if(error.status === 401) requestGatePasscode('Your access needs to be verified again. Enter the team passcode to continue.');
-      const results = error.payload?.results;
-      if(results) setStatus(`Weekly report: ${results.weekly?.ok ? results.weekly.mode : `failed (${results.weekly?.error || 'error'})`}; Daily log: ${results.daily?.ok ? results.daily.mode : `failed (${results.daily?.error || 'error'})`}.`, 'error');
-      else setStatus(`Publish failed: ${error.message}`,'error');
-    }finally{
-      setBusy(button,false,'Publish Stats');
-    }
+    publishRecord(record);
   });
+
+  byId('retryWeeklyBtn').addEventListener('click',() => pendingRetry && publishRecord(pendingRetry.record,'weekly'));
+  byId('retryDailyBtn').addEventListener('click',() => pendingRetry && publishRecord(pendingRetry.record,'daily'));
 
   byId('emailBtn').addEventListener('click',async() => {
     const button = byId('emailBtn');
@@ -1563,7 +1771,10 @@
     setStatus('Sending email…');
     try{
       await postJson(API_EMAIL,{subject,body:buildReport()});
+      lastEmailedKey = draftKeyForSelection();
+      lastEmailedSignature = signatureOf(record);
       setStatus(`Sent: ${subject}`,'success');
+      refreshProgress();
     }catch(error){
       if(error.status === 401) requestGatePasscode('Your access needs to be verified again. Enter the team passcode to continue.');
       setStatus(`Send failed: ${error.message}`,'error');
@@ -1583,6 +1794,7 @@
     }
     const [day, month, year] = today.date.split('/');
     byId('dateChip').setAttribute('aria-label', `Report date ${today.weekday}, ${Number(day)} ${MONTHS_SHORT[Number(month) - 1]} ${year}`);
+    byId('backfillFlag').hidden = !input.value || input.value >= repTodayForInput();
   };
 
   const repTodayForInput = () => {
@@ -1593,7 +1805,23 @@
     return `${part('year')}-${part('month')}-${part('day')}`;
   };
 
-  byId('reportDate').addEventListener('change', updateDateChip);
+  const applyTierFilter = () => {
+    const rep = repList.find(item => item.name === byId('repName').value);
+    const tiers = rep?.tiers || [];
+    document.querySelectorAll('#pipelines [data-tier]').forEach(card => {
+      const visible = tiers.length === 0 || tiers.includes(card.dataset.tier);
+      card.hidden = !visible;
+      card.setAttribute('aria-hidden',String(!visible));
+    });
+    byId('activeRepName').textContent = rep?.name || 'Choose a rep';
+    byId('headerTierSummary').textContent = tiers.length ? `· ${tiers.join(', ')}` : '';
+  };
+
+  byId('reportDate').addEventListener('change',() => {
+    loadDraftForSelection();
+    updateDateChip();
+    update();
+  });
 
   // Rep list: shared, from /api/reps. Only the chosen name is remembered on this device.
   const REP_KEY = 'drapsRepName';
@@ -1625,6 +1853,7 @@
   const showView = view => {
     document.body.dataset.view = view;
     byId('changeRepBtn').hidden = view !== 'tally';
+    sectionNav.hidden = view !== 'tally';
   };
 
   const setGateAccess = (verified,message = '') => {
@@ -1656,6 +1885,9 @@
       savePasscode(passcode);
       repList = result.reps;
       setRepOptions(readRepName());
+      byId('reportDate').value = repTodayForInput();
+      loadDraftForSelection();
+      applyTierFilter();
       updateDateChip();
       setGateAccess(true);
       return true;
@@ -1714,6 +1946,9 @@
       repList.sort((a,b) => a.name.localeCompare(b.name));
       setRepOptions(result.rep.name);
       saveRepName(result.rep.name);
+      byId('reportDate').value = repTodayForInput();
+      loadDraftForSelection();
+      applyTierFilter();
       updateDateChip();
       byId('repAddForm').reset();
       byId('repAddForm').hidden = true;
@@ -1732,6 +1967,8 @@
     saveRepName(byId('repName').value);
     updateStartButton();
     byId('reportDate').value = repTodayForInput();
+    loadDraftForSelection();
+    applyTierFilter();
     updateDateChip();
     update();
   });
@@ -1751,7 +1988,7 @@
 
   // ----- Admin panel. The PIN is held only while the panel is open. -----
   const ADMIN_STATES = ['NSW','ACT','VIC','QLD','SA','WA','TAS','NT'];
-  const REP_TIERS = (document.querySelector('meta[name="rep-tiers"]')?.content || 'FC,FR,PS').split(',').map(t => t.trim()).filter(Boolean);
+  const REP_TIERS = (document.querySelector('meta[name="rep-tiers"]')?.content || 'FC,FR,PS,SMSF,CONTRACT,RECRUITMENT').split(',').map(t => t.trim()).filter(Boolean);
   const adminModal = byId('adminModal');
   const pinBoxes = Array.from(document.querySelectorAll('.pin-box'));
   let adminPin = '';
@@ -1991,7 +2228,6 @@
   if(readPasscode()) loadReps();
   else setGateAccess(false);
 
-  load();
   numberIds.forEach(id => cleanNumberInput(byId(id)));
   render();
 })();

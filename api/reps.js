@@ -11,7 +11,7 @@ const defaultDeps = {
   store: { listReps, addRep },
 };
 
-const publicRep = rep => ({ name: rep.name, state: rep.state, timezone: rep.timezone });
+const publicRep = rep => ({ name: rep.name, state: rep.state, timezone: rep.timezone, tiers: rep.tiers || [] });
 
 // GET /api/reps                       -> { ok, reps: [{ name, state, timezone }] }
 // POST /api/reps { name, state }      -> { ok, created, rep }

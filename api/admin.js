@@ -9,7 +9,7 @@ const defaultDeps = {
   spreadsheetId: () => process.env.SHEET_ID,
   today: () => localDateParts('Australia/Brisbane').date,
   checkPin: checkAdminPin,
-  store: { listAllReps, addRep, saveRep, setRepActive },
+  store: { listAllReps, addRep, saveRep, setRepActive, saveRepTiers },
 };
 
 const publicRep = rep => ({ row: rep.row, name: rep.name, state: rep.state, timezone: rep.timezone, active: rep.active, tiers: rep.tiers || [] });

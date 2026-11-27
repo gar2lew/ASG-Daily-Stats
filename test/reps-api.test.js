@@ -39,12 +39,12 @@ test('missing passcode is rejected before the store is touched', async () => {
   assert.equal(d.calls.listReps, 0);
 });
 
-test('GET returns active reps as name, state and timezone', async () => {
-  const d = deps({ list: [{ name: 'Jaide', state: 'WA', timezone: 'Australia/Perth', active: true, added: '16/11/2026' }] });
+test('GET returns active reps with their assigned tiers', async () => {
+  const d = deps({ list: [{ name: 'Jaide', state: 'WA', timezone: 'Australia/Perth', active: true, added: '16/11/2026', tiers: ['FC', 'FR'] }] });
   const res = mkRes();
   await handleReps({ method: 'GET', headers: GOOD }, res, d.deps);
   assert.equal(res.code, 200);
-  assert.deepEqual(res.body, { ok: true, reps: [{ name: 'Jaide', state: 'WA', timezone: 'Australia/Perth' }] });
+  assert.deepEqual(res.body, { ok: true, reps: [{ name: 'Jaide', state: 'WA', timezone: 'Australia/Perth', tiers: ['FC', 'FR'] }] });
 });
 
 test('POST adds a new rep and returns created true', async () => {
